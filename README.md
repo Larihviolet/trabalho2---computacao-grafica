@@ -37,6 +37,9 @@ O primeiro carregamento pode demorar: o anjo e Toadbert têm malhas relativament
 | Mouse | Altera a direção de observação |
 | Roda do mouse | Altera o campo de visão, entre 1° e 45° |
 | E | Alterna o crescimento e a redução de Toadbert |
+| R | Liga/desliga a rotação do círculo de invocação |
+| M | Liga/desliga o movimento orbital do anjo |
+| P | Alterna a visualização em malha poligonal |
 | Esc | Fecha a aplicação |
 
 O cursor fica capturado pela janela. Como W e S acompanham a direção completa da câmera, olhar para cima ou para baixo também permite variar a altitude. A movimentação atual usa eventos de pressionamento/repetição de teclas e o intervalo entre quadros; sua sensação de velocidade também depende da repetição do teclado. O fator de velocidade está em `key_event`, em `main.py`, atualmente `200 * deltaTime`.
@@ -49,7 +52,7 @@ O sistema de coordenadas usa **Y como altura**, X como direção lateral e Z com
 
 | Elemento | Configuração atual |
 | --- | --- |
-| Chão | Quadrado de 200 × 200 unidades, em Y = −2 |
+| Chão | Grama em 200 × 200 unidades e disco circular de cobblestone sob a torre |
 | Grama | Textura BaseColor repetida a cada 4 unidades |
 | Torre | Centro horizontal `(0, −30)`, altura de 16 unidades |
 | Círculo | Largura de 3,2 unidades, centralizado dentro da torre e ligeiramente acima do chão |

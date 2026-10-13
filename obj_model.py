@@ -148,7 +148,6 @@ class ObjModel:
                 glUniformMatrix4fv(self.locations[name], 1, GL_TRUE, matrix)
             glUniform1i(self.locations['diffuseMap'], 0)
             glUniform1f(self.locations['alphaCutoff'], alpha_cutoff)
-            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
             glBindVertexArray(self.vao)
             # As cópias compartilham a mesma malha, texturas e programa de sombreadores.
             for matrix in (models if models is not None else (self.model,)):

@@ -78,7 +78,6 @@ class Skybox:
             glDisable(GL_CULL_FACE)
             glDepthFunc(GL_LEQUAL)
             glDepthMask(GL_FALSE)
-            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
             glBindVertexArray(self.vao)
             glDrawArrays(GL_TRIANGLES, 0, 3)
         finally:

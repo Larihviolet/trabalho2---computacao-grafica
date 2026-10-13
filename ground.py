@@ -10,9 +10,36 @@ from OpenGL.GL import *
 from shader_s import Shader
 
 
+def _make_vertices(size, height, center, shape):
+    half = size / 2.0
+    if shape == "square":
+        return np.array([
+            (center[0] - half, height, center[1] - half),
+            (center[0] - half, height, center[1] + half),
+            (center[0] + half, height, center[1] + half),
+            (center[0] - half, height, center[1] - half),
+            (center[0] + half, height, center[1] + half),
+            (center[0] + half, height, center[1] - half),
+        ], dtype=np.float32)
+    if shape == "circle":
+        segments = 64
+        angles = np.linspace(0.0, 2.0 * np.pi, segments + 1, dtype=np.float32)
+        perimeter = np.column_stack((
+            center[0] + half * np.cos(angles),
+            np.full(segments + 1, height, dtype=np.float32),
+            center[1] - half * np.sin(angles),
+        ))
+        vertices = np.empty((segments, 3, 3), dtype=np.float32)
+        vertices[:, 0, :] = (center[0], height, center[1])
+        vertices[:, 1, :] = perimeter[:-1]
+        vertices[:, 2, :] = perimeter[1:]
+        return vertices.reshape(-1, 3)
+    raise ValueError("A forma do chão deve ser 'square' ou 'circle'.")
+
+
 class Ground:
     def __init__(self, size=200.0, height=-2.0, color=(1.0, 1.0, 1.0),
-                 texture_path=None, tile_size=4.0):
+                 texture_path=None, tile_size=4.0, center=(0.0, 0.0), shape="square"):
         if size <= 0:
             raise ValueError("O tamanho do chão deve ser positivo.")
         if tile_size <= 0:
@@ -30,12 +57,8 @@ class Ground:
         shader_dir = Path(__file__).resolve().parent / "shaders"
         self.shader = Shader(str(shader_dir / "ground.vs"),
                              str(shader_dir / "ground.fs"))
-        half = size / 2.0
-        # Dois triângulos no plano XZ, com as normais voltadas para cima.
-        vertices = np.array([
-            (-half, height, -half), (-half, height, half), (half, height, half),
-            (-half, height, -half), (half, height, half), (half, height, -half),
-        ], dtype=np.float32)
+        vertices = _make_vertices(size, height, center, shape)
+        self.vertex_count = len(vertices)
         self.vao = glGenVertexArrays(1)
         self.vbo = glGenBuffers(1)
         previous_vao = int(glGetIntegerv(GL_VERTEX_ARRAY_BINDING))
@@ -72,7 +95,6 @@ class Ground:
                 glBindTexture(GL_TEXTURE_2D, previous_texture)
 
     def draw(self, view, projection):
-        # O chão fica preenchido mesmo quando os modelos usam modo aramado.
         previous_program = int(glGetIntegerv(GL_CURRENT_PROGRAM))
         previous_vao = int(glGetIntegerv(GL_VERTEX_ARRAY_BINDING))
         polygon_mode = glGetIntegerv(GL_POLYGON_MODE)
@@ -88,9 +110,8 @@ class Ground:
             glUniform1i(self.sampler_location, 0)
             glUniform1i(self.has_texture_location, bool(self.texture))
             glBindTexture(GL_TEXTURE_2D, self.texture)
-            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
             glBindVertexArray(self.vao)
-            glDrawArrays(GL_TRIANGLES, 0, 6)
+            glDrawArrays(GL_TRIANGLES, 0, self.vertex_count)
         finally:
             glBindTexture(GL_TEXTURE_2D, previous_texture)
             glActiveTexture(active_texture)

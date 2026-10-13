@@ -19,6 +19,7 @@ class Graveyard:
         self.orbit_radius = orbit_radius
         self.orbit_speed = orbit_speed
         self.orbit_angle = 0.0
+        self.angel_movement_enabled = True
         self.stone = ObjModel(root / "graveyard_stone" / "graveyard_stone.obj",
                               height=1.8, ground_height=0.0, center=(0.0, 0.0))
         self.stone_models = []
@@ -39,7 +40,8 @@ class Graveyard:
 
     def update(self, delta_time):
         # Usa o tempo entre quadros e reconstrói a matriz para evitar deriva na órbita.
-        self.orbit_angle = (self.orbit_angle + self.orbit_speed * max(float(delta_time), 0.0)) % 360.0
+        if self.angel_movement_enabled:
+            self.orbit_angle = (self.orbit_angle + self.orbit_speed * max(float(delta_time), 0.0)) % 360.0
         angle = np.radians(self.orbit_angle)
         self.angel_position = (
             self.center[0] + self.orbit_radius * np.cos(angle),
@@ -49,6 +51,9 @@ class Graveyard:
         # Orienta a estátua na direção tangente à trajetória.
         transform = glm.rotate(transform, float(np.pi / 2.0 - angle), glm.vec3(0, 1, 0))
         self.angel.model = np.array(transform, dtype=np.float32) @ self.angel_base
+
+    def toggle_angel_movement(self):
+        self.angel_movement_enabled = not self.angel_movement_enabled
 
     def draw(self, view, projection):
         self.stone.draw(view, projection, models=self.stone_models)

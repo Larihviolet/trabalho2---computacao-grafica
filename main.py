@@ -33,6 +33,9 @@ skybox = Skybox(root / "imagens" / "Skybox.png")
 ground = Ground(size=200.0, height=-2.0,
                 texture_path=root / "grass" / "2K" / "Poliigon_GrassPatchyGround_4585_BaseColor.jpg",
                 tile_size=4.0)
+tower_ground = Ground(size=13.0, height=-1.99, center=(0.0, -30.0),
+                      texture_path=root / "cobblestone" / "StoneBricksSplitface001_COL_2K.jpg",
+                      tile_size=4.0, shape="circle")
 tower = Tower(height=16.0, ground_height=-2.0)
 interior = TowerInterior(floor_height=-2.0)
 trees = OakTrees(ground_height=-2.0)
@@ -54,6 +57,7 @@ fov   =  45.0
 # Controle do tempo entre quadros.
 deltaTime = 0.0  # Intervalo entre o quadro atual e o anterior.
 lastFrame = 0.0
+wireframe_mode = False
 
 
 firstMouse = True
@@ -64,12 +68,18 @@ lastY =  altura/2
 
 
 def key_event(window,key,scancode,action,mods):
-    global cameraPos, cameraFront, cameraUp
+    global cameraPos, cameraFront, cameraUp, wireframe_mode
 
     if key == glfw.KEY_ESCAPE and action == glfw.PRESS:
         glfw.set_window_should_close(window, True)
     if key == glfw.KEY_E and action == glfw.PRESS:
         interior.toggle_wizard_size()
+    if key == glfw.KEY_P and action == glfw.PRESS:
+        wireframe_mode = not wireframe_mode
+    if key == glfw.KEY_R and action == glfw.PRESS:
+        interior.toggle_circle_rotation()
+    if key == glfw.KEY_M and action == glfw.PRESS:
+        graveyard.toggle_angel_movement()
     
     cameraSpeed = 200 * deltaTime
     if key == glfw.KEY_W and (action == glfw.PRESS or action == glfw.REPEAT):
@@ -195,11 +205,13 @@ while not glfw.window_should_close(window):
     
     mat_view = view()
     mat_projection = projection()
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE if wireframe_mode else GL_FILL)
+    ground.draw(mat_view, mat_projection)
+    tower_ground.draw(mat_view, mat_projection)
     tower.draw(mat_view, mat_projection)
     interior.draw(mat_view, mat_projection)
     trees.draw(mat_view, mat_projection)
     graveyard.draw(mat_view, mat_projection)
-    ground.draw(mat_view, mat_projection)
     skybox.draw(mat_view, mat_projection)
     
     glfw.swap_buffers(window)
@@ -210,4 +222,5 @@ trees.close()
 graveyard.close()
 skybox.close()
 ground.close()
+tower_ground.close()
 glfw.terminate()

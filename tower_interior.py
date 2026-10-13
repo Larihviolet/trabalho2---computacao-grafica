@@ -41,11 +41,15 @@ class TowerInterior:
         self.growing = False
         self.circle_angle = 0.0
         self.circle_speed = 30.0
+        self.circle_rotation_enabled = True
         self.update(0.0)
 
     def toggle_wizard_size(self):
         # Pressionar novamente também permite inverter uma transição em andamento.
         self.growing = not self.growing
+
+    def toggle_circle_rotation(self):
+        self.circle_rotation_enabled = not self.circle_rotation_enabled
 
     def update(self, delta_time):
         elapsed = max(float(delta_time), 0.0)
@@ -58,7 +62,8 @@ class TowerInterior:
         height = self.small_height + (self.large_height - self.small_height) * eased
         scale = glm.scale(glm.mat4(1.0), glm.vec3(height / self.large_height))
         self.wizard.model = around_pivot(self.wizard_pivot, scale) @ self.wizard_base
-        self.circle_angle = (self.circle_angle + self.circle_speed * elapsed) % 360.0
+        if self.circle_rotation_enabled:
+            self.circle_angle = (self.circle_angle + self.circle_speed * elapsed) % 360.0
         rotation = glm.rotate(glm.mat4(1.0), glm.radians(self.circle_angle), glm.vec3(0, 1, 0))
         self.circle.model = around_pivot(self.circle_pivot, rotation) @ self.circle_base
 
