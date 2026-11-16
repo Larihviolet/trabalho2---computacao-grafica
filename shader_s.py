@@ -1,57 +1,48 @@
+from pathlib import Path
+
 from OpenGL.GL import *
 
 class Shader:
     def __init__(self, vertexPath: str, fragmentPath: str):
-        # 1. Lê o código dos sombreadores de vértices e fragmentos.
-        try:
-            # Abre os arquivos dos sombreadores.
-            vShaderFile = open(vertexPath)
-            fShaderFile = open(fragmentPath)
-            
-            # Lê o conteúdo dos arquivos como texto.
-            vertexCode = vShaderFile.read()
-            fragmentCode = fShaderFile.read()
-            # Fecha os arquivos após a leitura.
-            vShaderFile.close()
-            fShaderFile.close()
+        shader_directory = Path(__file__).resolve().parent
+        vertex_path = Path(vertexPath)
+        fragment_path = Path(fragmentPath)
+        if not vertex_path.is_absolute():
+            vertex_path = shader_directory / vertex_path
+        if not fragment_path.is_absolute():
+            fragment_path = shader_directory / fragment_path
 
-            # 2. Compila os sombreadores.
-            # Sombreador de vértices.
-            vertex = glCreateShader(GL_VERTEX_SHADER)
-            glShaderSource(vertex, vertexCode)
-            glCompileShader(vertex)
-            self.checkCompileErrors(vertex, "VERTEX")
-            # Sombreador de fragmentos.
-            fragment = glCreateShader(GL_FRAGMENT_SHADER)
-            glShaderSource(fragment, fragmentCode)
-            glCompileShader(fragment)
-            self.checkCompileErrors(fragment, "FRAGMENT")
-            # Cria o programa que combina os dois sombreadores.
-            self.ID = glCreateProgram()
-            glAttachShader(self.ID, vertex)
-            glAttachShader(self.ID, fragment)
-            glLinkProgram(self.ID)
-            self.checkCompileErrors(self.ID, "PROGRAM")
-            # Após a ligação ao programa, libera os sombreadores individuais.
-            glDeleteShader(vertex)
-            glDeleteShader(fragment)
-        
-        except IOError:
-            print("ERROR::SHADER::FILE_NOT_SUCCESFULLY_READ")
-            
-        
+        vertexCode = vertex_path.read_text(encoding="utf-8")
+        fragmentCode = fragment_path.read_text(encoding="utf-8")
 
-    # Retorna o identificador do programa OpenGL.
+        # 2. compile shaders
+        vertex = glCreateShader(GL_VERTEX_SHADER)
+        glShaderSource(vertex, vertexCode)
+        glCompileShader(vertex)
+        self.checkCompileErrors(vertex, "VERTEX")
+        fragment = glCreateShader(GL_FRAGMENT_SHADER)
+        glShaderSource(fragment, fragmentCode)
+        glCompileShader(fragment)
+        self.checkCompileErrors(fragment, "FRAGMENT")
+        self.ID = glCreateProgram()
+        glAttachShader(self.ID, vertex)
+        glAttachShader(self.ID, fragment)
+        glLinkProgram(self.ID)
+        self.checkCompileErrors(self.ID, "PROGRAM")
+        glDeleteShader(vertex)
+        glDeleteShader(fragment)
+
+    # get program
     # ------------------------------------------------------------------------
     def getProgram(self):
         return self.ID
         
-    # Ativa o programa de sombreadores.
+    # activate the shader
     # ------------------------------------------------------------------------
     def use(self) -> None:
         glUseProgram(self.ID)
         
-    # Funções auxiliares para enviar variáveis uniformes ao programa.
+    # utility uniform functions
     # ------------------------------------------------------------------------
     def setBool(self, name: str, value: bool) -> None:
         glUniform1i(glGetUniformLocation(self.ID, name), int(value))
@@ -62,19 +53,20 @@ class Shader:
     def setFloat(self, name: str, value: float) -> None:
         glUniform1f(glGetUniformLocation(self.ID, name), value)
 
-    # Verifica erros de compilação dos sombreadores e de ligação do programa.
+    # utility function for checking shader compilation/linking errors.
     # ------------------------------------------------------------------------
     def checkCompileErrors(self, shader: int, type: str) -> None:
         if (type != "PROGRAM"):
             success = glGetShaderiv(shader, GL_COMPILE_STATUS)
             if (not success):
                 infoLog = glGetShaderInfoLog(shader)
-                print("ERROR::SHADER_COMPILATION_ERROR of type: " + type + "\n" + infoLog.decode() + "\n -- --------------------------------------------------- -- ")
+                raise RuntimeError(
+                    "ERROR::SHADER_COMPILATION_ERROR of type: "
+                    + type + "\n" + infoLog.decode(errors="replace"))
         else:
             success = glGetProgramiv(shader, GL_LINK_STATUS)
             if (not success):
                 infoLog = glGetProgramInfoLog(shader)
-                print("ERROR::PROGRAM_LINKING_ERROR of type: " + type + "\n" + infoLog.decode() + "\n -- --------------------------------------------------- -- ")
-
-                
-    
+                raise RuntimeError(
+                    "ERROR::PROGRAM_LINKING_ERROR of type: "
+                    + type + "\n" + infoLog.decode(errors="replace"))

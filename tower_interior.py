@@ -25,7 +25,7 @@ class TowerInterior:
                               height=2.8, ground_height=floor_height,
                               center=(x + 2.4, z), rotation_x=90.0)
         self.wizard = ObjModel(root / "toadbert_the_wizard" / "toadbert_the_wizard_10th_sept_2020.obj",
-                               height=2.8, ground_height=floor_height + 0.65, center=(x, z))
+                               height=4.0, ground_height=floor_height + 0.65, center=(x, z))
         self.objects = (self.circle, self.witch, self.wizard)
         self.circle_pivot = (x, floor_height + 0.04, z)
         self.wizard_pivot = (x, floor_height + 0.65, z)
@@ -34,8 +34,8 @@ class TowerInterior:
         # O modelo corrigido olha para +Z; girar -90 graus o orienta para o círculo.
         rotation = glm.rotate(glm.mat4(1.0), glm.radians(-90.0), glm.vec3(0, 1, 0))
         self.witch.model = around_pivot((x + 2.4, floor_height, z), rotation) @ self.witch.model
-        self.small_height = 0.35
-        self.large_height = 2.8
+        self.small_height = 4.0
+        self.large_height = 8.0
         self.growth_duration = 2.5
         self.growth_progress = 0.0
         self.growing = False
@@ -43,10 +43,6 @@ class TowerInterior:
         self.circle_speed = 30.0
         self.circle_rotation_enabled = True
         self.update(0.0)
-
-    def toggle_wizard_size(self):
-        # Pressionar novamente também permite inverter uma transição em andamento.
-        self.growing = not self.growing
 
     def toggle_circle_rotation(self):
         self.circle_rotation_enabled = not self.circle_rotation_enabled

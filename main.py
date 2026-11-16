@@ -72,12 +72,6 @@ def key_event(window,key,scancode,action,mods):
 
     if key == glfw.KEY_ESCAPE and action == glfw.PRESS:
         glfw.set_window_should_close(window, True)
-    if key == glfw.KEY_E and action == glfw.PRESS:
-        interior.toggle_wizard_size()
-    if key == glfw.KEY_P and action == glfw.PRESS:
-        wireframe_mode = not wireframe_mode
-    if key == glfw.KEY_R and action == glfw.PRESS:
-        interior.toggle_circle_rotation()
     if key == glfw.KEY_M and action == glfw.PRESS:
         graveyard.toggle_angel_movement()
     
