@@ -39,8 +39,13 @@ O primeiro carregamento pode demorar: o anjo e Toadbert têm malhas relativament
 | E | Alterna o crescimento e a redução de Toadbert |
 | R | Liga/desliga a rotação do círculo de invocação |
 | M | Liga/desliga o movimento orbital do anjo |
+| F | Liga/desliga a iluminação difusa dos dois focos |
+| G | Liga/desliga a iluminação especular dos dois focos |
+| Page Up / Page Down | Aumenta/diminui a intensidade do sol em passos de 0,05 |
 | P | Alterna a visualização em malha poligonal |
 | Esc | Fecha a aplicação |
+
+O console informa quando a iluminação difusa ou especular é ativada ou desativada e mostra o valor atualizado da intensidade solar. A intensidade do sol fica entre 0 e 1; esses controles não alteram o holofote interno da torre.
 
 O cursor fica capturado pela janela. Como W e S acompanham a direção completa da câmera, olhar para cima ou para baixo também permite variar a altitude. A movimentação atual usa eventos de pressionamento/repetição de teclas e o intervalo entre quadros; sua sensação de velocidade também depende da repetição do teclado. O fator de velocidade está em `key_event`, em `main.py`, atualmente `200 * deltaTime`.
 
@@ -210,15 +215,16 @@ O teto é um limite lógico da cena: a skybox não possui paredes físicas. Tamb
 
 `shaders/model.vs` envia UVs, cor do vértice e normal para o sombreador de fragmentos. As normais são transformadas pela inversa transposta da parte linear da matriz `model`, a transformação apropriada para direções perpendiculares às superfícies.
 
-`shaders/model.fs` combina:
+`shaders/model.fs` e `shaders/ground.fs` combinam:
 
 ```text
-cor da superfície = Kd × cor do vértice × cor da textura, quando houver textura
-intensidade = 0,4 + 0,6 × máximo(produtoEscalar(normal, direçãoDaLuz), 0)
-cor final = cor da superfície × intensidade
+cor da superfície = cor base × cor do vértice × textura, quando houver textura
+difusa = máximo(produtoEscalar(normal, direçãoDaLuz), 0) × intensidade da fonte
+especular = Ks × máximo(produtoEscalar(direçãoDoObservador, direçãoRefletida), 0)^Ns
+cor final = cor da superfície × (ambiente + difusa + especular)
 ```
 
-A direção da luz é a versão normalizada de `(0,4, 1,0, 0,6)`. O termo 0,4 mantém as superfícies visíveis mesmo sem incidência direta, enquanto o produto escalar produz o termo difuso. Trata-se de iluminação ambiente e difusa simplificada, sem sombras projetadas ou reflexos especulares.
+O holofote interno usa cone e atenuação por distância; o sol externo usa direção e intensidade configuráveis. Os dois calculam componentes difusa e especular usando a posição da câmera, com `ks=0,5` e expoente `ns=32`. A contribuição solar é desativada dentro do volume da torre. O termo ambiente mantém superfícies visíveis sem incidência direta. A iluminação não gera sombras projetadas.
 
 As folhas são planos com imagens RGBA. Fragmentos com alfa inferior a 0,5 são descartados, removendo o fundo dos retângulos. Isso é **recorte por alfa**, sem mistura de transparência. O módulo das árvores desativa temporariamente o descarte de faces traseiras para tornar as folhas visíveis dos dois lados.
 
@@ -226,7 +232,7 @@ As folhas são planos com imagens RGBA. Fragmentos com alfa inferior a 0,5 são 
 
 `Ground` constrói dois triângulos no plano XZ. Seus UVs vêm de `position.xz / tileSize`. `GL_REPEAT` repete a imagem `Poliigon_GrassPatchyGround_4585_BaseColor.jpg`, e `tile_size=4` produz 50 repetições por lado do terreno.
 
-Mipmaps e filtragem linear suavizam a textura à distância. O sombreador do chão usa diretamente a cor da imagem; não aplica a iluminação difusa dos modelos. Os mapas de normal, rugosidade, metalicidade, oclusão e deslocamento existentes nas pastas não são utilizados pelo renderizador atual.
+Mipmaps e filtragem linear suavizam a textura à distância. O sombreador do chão usa uma normal vertical fixa e aplica a iluminação ambiente, difusa e especular do holofote e do sol. Os mapas de normal, rugosidade, metalicidade, oclusão e deslocamento existentes nas pastas não são utilizados pelo renderizador atual.
 
 ## 9. Skybox sem geometria de cubo visível
 
@@ -316,7 +322,7 @@ O nome da variável mantém as chamadas `draw` e `close`. A posição do ritual 
 | Velocidade do círculo | `circle_speed` em `tower_interior.py` |
 | Distribuição e tamanho dos carvalhos | `OakTrees.__init__` |
 | Fileiras de lápides, raio e velocidade do anjo | `Graveyard.__init__` |
-| Direção e intensidade da luz | `shaders/model.fs` |
+| Holofote e sol (posição, direção e intensidade) | `main.py` e `shaders/model.fs` |
 | Imagem de fundo | Caminho de `Skybox` em `main.py` |
 
 Ao mudar a localização da torre, mantenha os parâmetros `center` do interior e do cemitério sincronizados. Ao mudar o nível do terreno, ajuste as alturas de apoio dos outros módulos.

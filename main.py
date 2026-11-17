@@ -51,10 +51,14 @@ spotlight_inner_cutoff = float(np.cos(np.radians(18.0)))
 spotlight_outer_cutoff = float(np.cos(np.radians(28.0)))
 sun_direction = (0.35, 0.85, 0.40)
 sun_color = (1.0, 0.92, 0.78)
-sun_intensity =1.0
+sun_intensity =1.0 #Intensidade da luz do sol (0.0 a 1.0). 
+sun_intensity_step = 0.05
+diffuse_enabled = True
+specular_enabled = True
+
 # Volume interno da torre em coordenadas de mundo (centro XZ e limites Y).
 sun_exclusion_center = (0.0, -30.0)
-sun_exclusion_radius = 5.5
+sun_exclusion_radius = 3.5
 sun_exclusion_min_height = -2.0
 sun_exclusion_max_height = 14.0
 
@@ -67,6 +71,8 @@ def configure_lighting(shader):
         glUniform3f(glGetUniformLocation(program, "lightPosition"), *spotlight_position)
         glUniform3f(glGetUniformLocation(program, "lightDirection"), *spotlight_direction)
         glUniform3f(glGetUniformLocation(program, "lightColor"), *spotlight_color)
+        glUniform1f(glGetUniformLocation(program, "ks"), 0.5)
+        glUniform1f(glGetUniformLocation(program, "ns"), 32.0)
         glUniform1f(glGetUniformLocation(program, "innerCutoff"), spotlight_inner_cutoff)
         glUniform1f(glGetUniformLocation(program, "outerCutoff"), spotlight_outer_cutoff)
         glUniform3f(glGetUniformLocation(program, "sunDirection"), *sun_direction)
@@ -90,6 +96,17 @@ scene_shaders.extend((trees.asset.shader, graveyard.stone.shader, graveyard.ange
 scene_shaders.extend((ground.shader, tower_ground.shader))
 for scene_shader in scene_shaders:
     configure_lighting(scene_shader)
+
+scene_uniforms = []
+for shader in scene_shaders:
+    program = shader.getProgram()
+    scene_uniforms.append((
+        program,
+        glGetUniformLocation(program, "viewPos"),
+        glGetUniformLocation(program, "diffuseEnabled"),
+        glGetUniformLocation(program, "specularEnabled"),
+        glGetUniformLocation(program, "sunIntensity"),
+    ))
 
 # Posição, direção de observação e eixo vertical da câmera.
 cameraPos   = glm.vec3(0.0, 5.0, 3.0)
@@ -118,11 +135,31 @@ lastY =  altura/2
 
 def key_event(window,key,scancode,action,mods):
     global cameraPos, cameraFront, cameraUp, wireframe_mode
+    global diffuse_enabled, specular_enabled
+    global sun_intensity
 
     if key == glfw.KEY_ESCAPE and action == glfw.PRESS:
         glfw.set_window_should_close(window, True)
     if key == glfw.KEY_M and action == glfw.PRESS:
         graveyard.toggle_angel_movement()
+    if key == glfw.KEY_F and action == glfw.PRESS:
+        diffuse_enabled = not diffuse_enabled
+        state = "ativada" if diffuse_enabled else "desativada"
+        print(f"Iluminacao difusa {state} (F)")
+    if key == glfw.KEY_G and action == glfw.PRESS:
+        specular_enabled = not specular_enabled
+        state = "ativada" if specular_enabled else "desativada"
+        print(f"Iluminacao especular {state} (G)")
+    if key == glfw.KEY_PAGE_UP and action in (glfw.PRESS, glfw.REPEAT):
+        previous_intensity = sun_intensity
+        sun_intensity = min(1.0, sun_intensity + sun_intensity_step)
+        if sun_intensity != previous_intensity:
+            print(f"Intensidade do sol: {sun_intensity:.2f} (Page Up)")
+    if key == glfw.KEY_PAGE_DOWN and action in (glfw.PRESS, glfw.REPEAT):
+        previous_intensity = sun_intensity
+        sun_intensity = max(0.0, sun_intensity - sun_intensity_step)
+        if sun_intensity != previous_intensity:
+            print(f"Intensidade do sol: {sun_intensity:.2f} (Page Down)")
     
     cameraSpeed = 200 * deltaTime
     if key == glfw.KEY_W and (action == glfw.PRESS or action == glfw.REPEAT):
@@ -245,6 +282,18 @@ while not glfw.window_should_close(window):
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
     
     glClearColor(1.0, 1.0, 1.0, 1.0)
+
+    previous_program = int(glGetIntegerv(GL_CURRENT_PROGRAM))
+    try:
+        for (program, view_location, diffuse_location, specular_location,
+             sun_intensity_location) in scene_uniforms:
+            glUseProgram(program)
+            glUniform3f(view_location, cameraPos.x, cameraPos.y, cameraPos.z)
+            glUniform1i(diffuse_location, int(diffuse_enabled))
+            glUniform1i(specular_location, int(specular_enabled))
+            glUniform1f(sun_intensity_location, sun_intensity)
+    finally:
+        glUseProgram(previous_program)
     
     mat_view = view()
     mat_projection = projection()

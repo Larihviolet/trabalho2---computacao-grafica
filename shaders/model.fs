@@ -10,6 +10,11 @@ uniform float alphaCutoff;
 uniform vec3 lightPosition;
 uniform vec3 lightDirection;
 uniform vec3 lightColor;
+uniform vec3 viewPos;
+uniform float ks;
+uniform float ns;
+uniform bool diffuseEnabled;
+uniform bool specularEnabled;
 uniform float innerCutoff;
 uniform float outerCutoff;
 uniform vec3 sunDirection;
@@ -35,14 +40,29 @@ void main() {
     float attenuation = 1.0 / (1.0 + 0.007 * distanceToLight +
                                0.0002 * distanceToLight * distanceToLight);
     vec3 normal = normalize(worldNormal);
-    float diffuse = max(dot(normal, lightDir), 0.0);
+    vec3 viewDir = normalize(viewPos - worldPosition);
+    float diffuseFactor = max(dot(normal, lightDir), 0.0);
+    float diffuse = diffuseEnabled ? diffuseFactor : 0.0;
+    vec3 reflectDir = reflect(-lightDir, normal);
+    float specularFactor = specularEnabled && diffuseFactor > 0.0
+        ? pow(max(dot(viewDir, reflectDir), 0.0), max(ns, 1.0))
+        : 0.0;
+    vec3 specular = ks * specularFactor * lightColor * cone * attenuation * 2.5;
     bool insideTower = worldPosition.y >= sunExclusionMinHeight &&
                        worldPosition.y <= sunExclusionMaxHeight &&
                        distance(worldPosition.xz, sunExclusionCenter) <= sunExclusionRadius;
-    float sunDiffuse = insideTower ? 0.0 :
-                       max(dot(normal, normalize(sunDirection)), 0.0);
+    vec3 sunLightDir = normalize(sunDirection);
+    float sunDiffuseFactor = max(dot(normal, sunLightDir), 0.0);
+    float sunDiffuse = !insideTower && diffuseEnabled ? sunDiffuseFactor : 0.0;
+    vec3 sunReflectDir = reflect(-sunLightDir, normal);
+    float sunSpecularFactor = !insideTower && specularEnabled && sunDiffuseFactor > 0.0
+        ? pow(max(dot(viewDir, sunReflectDir), 0.0), max(ns, 1.0))
+        : 0.0;
+    vec3 sunSpecular = ks * sunSpecularFactor * sunColor * sunIntensity;
     vec3 illumination = vec3(0.22) +
                         lightColor * diffuse * cone * attenuation * 2.5 +
-                        sunColor * sunDiffuse * sunIntensity;
+                        specular +
+                        sunColor * sunDiffuse * sunIntensity +
+                        sunSpecular;
     fragmentColor = vec4(color * illumination, 1.0);
 }
