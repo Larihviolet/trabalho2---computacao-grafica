@@ -42,6 +42,55 @@ trees = OakTrees(ground_height=-2.0)
 graveyard = Graveyard(ground_height=-2.0)
 camera_bounds = CameraBounds(ground.size, ground.height, max_height=60.0)
 
+# Holofote fixo acima da torre, apontado para o chão.
+spotlight_max_height = 10.0
+spotlight_position = (0.0, spotlight_max_height, -30.0)
+spotlight_direction = (0.0, -1.0, 0.0)
+spotlight_color = (0.78, 0.86, 1.0)
+spotlight_inner_cutoff = float(np.cos(np.radians(18.0)))
+spotlight_outer_cutoff = float(np.cos(np.radians(28.0)))
+sun_direction = (0.35, 0.85, 0.40)
+sun_color = (1.0, 0.92, 0.78)
+sun_intensity =1.0
+# Volume interno da torre em coordenadas de mundo (centro XZ e limites Y).
+sun_exclusion_center = (0.0, -30.0)
+sun_exclusion_radius = 5.5
+sun_exclusion_min_height = -2.0
+sun_exclusion_max_height = 14.0
+
+
+def configure_lighting(shader):
+    program = shader.getProgram()
+    previous_program = int(glGetIntegerv(GL_CURRENT_PROGRAM))
+    try:
+        glUseProgram(program)
+        glUniform3f(glGetUniformLocation(program, "lightPosition"), *spotlight_position)
+        glUniform3f(glGetUniformLocation(program, "lightDirection"), *spotlight_direction)
+        glUniform3f(glGetUniformLocation(program, "lightColor"), *spotlight_color)
+        glUniform1f(glGetUniformLocation(program, "innerCutoff"), spotlight_inner_cutoff)
+        glUniform1f(glGetUniformLocation(program, "outerCutoff"), spotlight_outer_cutoff)
+        glUniform3f(glGetUniformLocation(program, "sunDirection"), *sun_direction)
+        glUniform3f(glGetUniformLocation(program, "sunColor"), *sun_color)
+        glUniform1f(glGetUniformLocation(program, "sunIntensity"), sun_intensity)
+        glUniform2f(glGetUniformLocation(program, "sunExclusionCenter"),
+                    *sun_exclusion_center)
+        glUniform1f(glGetUniformLocation(program, "sunExclusionRadius"),
+                    sun_exclusion_radius)
+        glUniform1f(glGetUniformLocation(program, "sunExclusionMinHeight"),
+                    sun_exclusion_min_height)
+        glUniform1f(glGetUniformLocation(program, "sunExclusionMaxHeight"),
+                    sun_exclusion_max_height)
+    finally:
+        glUseProgram(previous_program)
+
+
+scene_shaders = [tower.shader]
+scene_shaders.extend(obj.shader for obj in interior.objects)
+scene_shaders.extend((trees.asset.shader, graveyard.stone.shader, graveyard.angel.shader))
+scene_shaders.extend((ground.shader, tower_ground.shader))
+for scene_shader in scene_shaders:
+    configure_lighting(scene_shader)
+
 # Posição, direção de observação e eixo vertical da câmera.
 cameraPos   = glm.vec3(0.0, 5.0, 3.0)
 cameraFront = glm.vec3(0.0, 0.0, -1.0)
