@@ -71,6 +71,15 @@ def configure_lighting(shader):
         glUniform3f(glGetUniformLocation(program, "lightPosition"), *spotlight_position)
         glUniform3f(glGetUniformLocation(program, "lightDirection"), *spotlight_direction)
         glUniform3f(glGetUniformLocation(program, "lightColor"), *spotlight_color)
+        glUniform3f(glGetUniformLocation(program, "angelLightPosition"),
+                    *graveyard.light_position)
+        glUniform3f(glGetUniformLocation(program, "angelLightDirection"),
+                    *graveyard.light_direction)
+        glUniform3f(glGetUniformLocation(program, "angelLightColor"), 0.25, 0.75, 1.0)
+        glUniform1f(glGetUniformLocation(program, "angelInnerCutoff"),
+                    float(np.cos(np.radians(18.0))))
+        glUniform1f(glGetUniformLocation(program, "angelOuterCutoff"),
+                    float(np.cos(np.radians(28.0))))
         glUniform1f(glGetUniformLocation(program, "ks"), 0.5)
         glUniform1f(glGetUniformLocation(program, "ns"), 32.0)
         glUniform1f(glGetUniformLocation(program, "innerCutoff"), spotlight_inner_cutoff)
@@ -106,6 +115,8 @@ for shader in scene_shaders:
         glGetUniformLocation(program, "diffuseEnabled"),
         glGetUniformLocation(program, "specularEnabled"),
         glGetUniformLocation(program, "sunIntensity"),
+        glGetUniformLocation(program, "angelLightPosition"),
+        glGetUniformLocation(program, "angelLightDirection"),
     ))
 
 # Posição, direção de observação e eixo vertical da câmera.
@@ -286,12 +297,15 @@ while not glfw.window_should_close(window):
     previous_program = int(glGetIntegerv(GL_CURRENT_PROGRAM))
     try:
         for (program, view_location, diffuse_location, specular_location,
-             sun_intensity_location) in scene_uniforms:
+             sun_intensity_location, angel_position_location,
+             angel_direction_location) in scene_uniforms:
             glUseProgram(program)
             glUniform3f(view_location, cameraPos.x, cameraPos.y, cameraPos.z)
             glUniform1i(diffuse_location, int(diffuse_enabled))
             glUniform1i(specular_location, int(specular_enabled))
             glUniform1f(sun_intensity_location, sun_intensity)
+            glUniform3f(angel_position_location, *graveyard.light_position)
+            glUniform3f(angel_direction_location, *graveyard.light_direction)
     finally:
         glUseProgram(previous_program)
     

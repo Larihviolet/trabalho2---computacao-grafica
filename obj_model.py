@@ -133,7 +133,8 @@ class ObjModel:
                 material['color'] = (0.65, 0.62, 0.56)
         glBindTexture(GL_TEXTURE_2D, previous_texture)
         self.locations = {name: glGetUniformLocation(self.shader.getProgram(), name)
-                          for name in ('model', 'view', 'projection', 'baseColor', 'hasTexture', 'diffuseMap', 'alphaCutoff')}
+                          for name in ('model', 'view', 'projection', 'baseColor', 'hasTexture',
+                                       'diffuseMap', 'alphaCutoff', 'emissive')}
 
     def draw(self, view, projection, models=None, alpha_cutoff=0.0):
         previous_program = int(glGetIntegerv(GL_CURRENT_PROGRAM))
@@ -148,6 +149,7 @@ class ObjModel:
                 glUniformMatrix4fv(self.locations[name], 1, GL_TRUE, matrix)
             glUniform1i(self.locations['diffuseMap'], 0)
             glUniform1f(self.locations['alphaCutoff'], alpha_cutoff)
+            glUniform1i(self.locations['emissive'], GL_FALSE)
             glBindVertexArray(self.vao)
             # As cópias compartilham a mesma malha, texturas e programa de sombreadores.
             for matrix in (models if models is not None else (self.model,)):

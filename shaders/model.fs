@@ -7,9 +7,15 @@ uniform vec3 baseColor;
 uniform bool hasTexture;
 uniform sampler2D diffuseMap;
 uniform float alphaCutoff;
+uniform bool emissive;
 uniform vec3 lightPosition;
 uniform vec3 lightDirection;
 uniform vec3 lightColor;
+uniform vec3 angelLightPosition;
+uniform vec3 angelLightDirection;
+uniform vec3 angelLightColor;
+uniform float angelInnerCutoff;
+uniform float angelOuterCutoff;
 uniform vec3 viewPos;
 uniform float ks;
 uniform float ns;
@@ -32,6 +38,10 @@ void main() {
         if (texel.a < alphaCutoff) discard;
         color *= texel.rgb;
     }
+    if (emissive) {
+        fragmentColor = vec4(color, 1.0);
+        return;
+    }
     vec3 toLight = lightPosition - worldPosition;
     float distanceToLight = length(toLight);
     vec3 lightDir = normalize(toLight);
@@ -48,6 +58,22 @@ void main() {
         ? pow(max(dot(viewDir, reflectDir), 0.0), max(ns, 1.0))
         : 0.0;
     vec3 specular = ks * specularFactor * lightColor * cone * attenuation * 2.5;
+    vec3 toAngelLight = angelLightPosition - worldPosition;
+    float angelDistance = length(toAngelLight);
+    vec3 angelLightDir = normalize(toAngelLight);
+    float angelTheta = dot(normalize(angelLightDirection), -angelLightDir);
+    float angelCone = clamp((angelTheta - angelOuterCutoff) /
+                            (angelInnerCutoff - angelOuterCutoff), 0.0, 1.0);
+    float angelAttenuation = 1.0 / (1.0 + 0.007 * angelDistance +
+                                   0.0002 * angelDistance * angelDistance);
+    float angelDiffuseFactor = max(dot(normal, angelLightDir), 0.0);
+    float angelDiffuse = diffuseEnabled ? angelDiffuseFactor : 0.0;
+    vec3 angelReflectDir = reflect(-angelLightDir, normal);
+    float angelSpecularFactor = specularEnabled && angelDiffuseFactor > 0.0
+        ? pow(max(dot(viewDir, angelReflectDir), 0.0), max(ns, 1.0))
+        : 0.0;
+    vec3 angelSpecular = ks * angelSpecularFactor * angelLightColor *
+                         angelCone * angelAttenuation * 2.5;
     bool insideTower = worldPosition.y >= sunExclusionMinHeight &&
                        worldPosition.y <= sunExclusionMaxHeight &&
                        distance(worldPosition.xz, sunExclusionCenter) <= sunExclusionRadius;
@@ -62,6 +88,8 @@ void main() {
     vec3 illumination = vec3(0.22) +
                         lightColor * diffuse * cone * attenuation * 2.5 +
                         specular +
+                        angelLightColor * angelDiffuse * angelCone * angelAttenuation * 2.5 +
+                        angelSpecular +
                         sunColor * sunDiffuse * sunIntensity +
                         sunSpecular;
     fragmentColor = vec4(color * illumination, 1.0);
