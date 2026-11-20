@@ -7,6 +7,7 @@ import numpy as np
 from PIL import Image
 from OpenGL.GL import *
 
+from material import DEFAULT_MATERIAL
 from shader_s import Shader
 
 
@@ -53,6 +54,7 @@ class Ground:
                 image = source.convert("RGBA").transpose(Image.Transpose.FLIP_TOP_BOTTOM)
         self.color = color
         self.tile_size = tile_size
+        self.material = DEFAULT_MATERIAL
         self.texture = 0
         shader_dir = Path(__file__).resolve().parent / "shaders"
         self.shader = Shader(str(shader_dir / "ground.vs"),
@@ -79,6 +81,9 @@ class Ground:
         self.tile_size_location = glGetUniformLocation(program, "tileSize")
         self.sampler_location = glGetUniformLocation(program, "grassTexture")
         self.has_texture_location = glGetUniformLocation(program, "hasTexture")
+        self.material_locations = {
+            name: glGetUniformLocation(program, name) for name in ("ka", "kd", "ks", "ns")
+        }
         if image is not None:
             self.texture = glGenTextures(1)
             previous_texture = int(glGetIntegerv(GL_TEXTURE_BINDING_2D))
@@ -109,6 +114,10 @@ class Ground:
             glUniform1f(self.tile_size_location, self.tile_size)
             glUniform1i(self.sampler_location, 0)
             glUniform1i(self.has_texture_location, bool(self.texture))
+            glUniform1f(self.material_locations["ka"], self.material.ambient)
+            glUniform1f(self.material_locations["kd"], self.material.diffuse)
+            glUniform1f(self.material_locations["ks"], self.material.specular)
+            glUniform1f(self.material_locations["ns"], self.material.shininess)
             glBindTexture(GL_TEXTURE_2D, self.texture)
             glBindVertexArray(self.vao)
             glDrawArrays(GL_TRIANGLES, 0, self.vertex_count)

@@ -26,13 +26,15 @@ class OakTrees:
                 transform = glm.rotate(transform, float(rng.uniform(0, 2 * np.pi)), glm.vec3(0, 1, 0))
                 transform = glm.scale(transform, glm.vec3(float(rng.uniform(0.8, 1.2))))
                 self.models.append(np.array(transform, dtype=np.float32) @ self.asset.model)
+        self.materials = None
 
     def draw(self, view, projection):
         # As folhas são planos visíveis dos dois lados; o canal alfa recorta seu contorno.
         culling = bool(glIsEnabled(GL_CULL_FACE))
         glDisable(GL_CULL_FACE)
         try:
-            self.asset.draw(view, projection, models=self.models, alpha_cutoff=0.5)
+            self.asset.draw(view, projection, models=self.models, alpha_cutoff=0.5,
+                            materials=self.materials)
         finally:
             if culling:
                 glEnable(GL_CULL_FACE)

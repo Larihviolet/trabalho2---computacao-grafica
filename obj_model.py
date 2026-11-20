@@ -8,6 +8,7 @@ import numpy as np
 from PIL import Image
 from OpenGL.GL import *
 
+from material import DEFAULT_MATERIAL
 from shader_s import Shader
 
 
@@ -98,6 +99,7 @@ class ObjModel:
             ground_height - minimum[1] * scale,
             center[1] - midpoint[2] * scale))
         self.model = np.array(glm.scale(transform, glm.vec3(scale)), dtype=np.float32)
+        self.material = DEFAULT_MATERIAL
         shaders = Path(__file__).resolve().parent / "shaders"
         self.shader = Shader(str(shaders / "model.vs"), str(shaders / "model.fs"))
         self.vao = glGenVertexArrays(1)
@@ -134,9 +136,17 @@ class ObjModel:
         glBindTexture(GL_TEXTURE_2D, previous_texture)
         self.locations = {name: glGetUniformLocation(self.shader.getProgram(), name)
                           for name in ('model', 'view', 'projection', 'baseColor', 'hasTexture',
-                                       'diffuseMap', 'alphaCutoff', 'emissive')}
+                                       'diffuseMap', 'alphaCutoff',
+                                       'ka', 'kd', 'ks', 'ns')}
 
-    def draw(self, view, projection, models=None, alpha_cutoff=0.0):
+    def draw(self, view, projection, models=None, alpha_cutoff=0.0, materials=None):
+        matrices = tuple(models if models is not None else (self.model,))
+        if materials is None:
+            draw_materials = (self.material,) * len(matrices)
+        else:
+            draw_materials = tuple(materials)
+            if len(draw_materials) != len(matrices):
+                raise ValueError("Deve haver um material para cada matriz de modelo.")
         previous_program = int(glGetIntegerv(GL_CURRENT_PROGRAM))
         previous_vao = int(glGetIntegerv(GL_VERTEX_ARRAY_BINDING))
         active_texture = int(glGetIntegerv(GL_ACTIVE_TEXTURE))
@@ -149,16 +159,19 @@ class ObjModel:
                 glUniformMatrix4fv(self.locations[name], 1, GL_TRUE, matrix)
             glUniform1i(self.locations['diffuseMap'], 0)
             glUniform1f(self.locations['alphaCutoff'], alpha_cutoff)
-            glUniform1i(self.locations['emissive'], GL_FALSE)
             glBindVertexArray(self.vao)
             # As cópias compartilham a mesma malha, texturas e programa de sombreadores.
-            for matrix in (models if models is not None else (self.model,)):
+            for matrix, instance_material in zip(matrices, draw_materials):
                 glUniformMatrix4fv(self.locations['model'], 1, GL_TRUE, matrix)
+                glUniform1f(self.locations['ka'], instance_material.ambient)
+                glUniform1f(self.locations['kd'], instance_material.diffuse)
+                glUniform1f(self.locations['ks'], instance_material.specular)
+                glUniform1f(self.locations['ns'], instance_material.shininess)
                 for start, count, name in self.batches:
-                    material = self.materials.get(name, {})
-                    texture = material.get('id', 0)
+                    obj_material = self.materials.get(name, {})
+                    texture = obj_material.get('id', 0)
                     glUniform1i(self.locations['hasTexture'], bool(texture))
-                    glUniform3f(self.locations['baseColor'], *material.get('color', (0.65, 0.62, 0.56)))
+                    glUniform3f(self.locations['baseColor'], *obj_material.get('color', (0.65, 0.62, 0.56)))
                     glBindTexture(GL_TEXTURE_2D, texture)
                     glDrawArrays(GL_TRIANGLES, start, count)
         finally:

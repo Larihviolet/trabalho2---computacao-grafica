@@ -11,6 +11,7 @@ from ground import Ground
 from graveyard import Graveyard
 from camera_bounds import CameraBounds
 from pathlib import Path
+from material import Material
 
 glfw.init()
 glfw.window_hint(glfw.VISIBLE, glfw.FALSE)
@@ -33,7 +34,7 @@ skybox = Skybox(root / "imagens" / "Skybox.png")
 ground = Ground(size=200.0, height=-2.0,
                 texture_path=root / "grass" / "2K" / "Poliigon_GrassPatchyGround_4585_BaseColor.jpg",
                 tile_size=4.0)
-tower_ground = Ground(size=13.0, height=-1.99, center=(0.0, -30.0),
+tower_ground = Ground(size=11.8, height=-1.99, center=(0.0, -30.0),
                       texture_path=root / "cobblestone" / "StoneBricksSplitface001_COL_2K.jpg",
                       tile_size=4.0, shape="circle")
 tower = Tower(height=16.0, ground_height=-2.0)
@@ -42,25 +43,69 @@ trees = OakTrees(ground_height=-2.0)
 graveyard = Graveyard(ground_height=-2.0)
 camera_bounds = CameraBounds(ground.size, ground.height, max_height=60.0)
 
+# Materiais por objeto: ka, kd e ks controlam reflexões; ns controla o brilho.
+material_profiles = {
+    "tower": Material(0.68, 0.24, 40.0, ambient=0.70),
+    "circle": Material(0.82, 0.10, 18.0, ambient=0.62),
+    "witch": Material(0.76, 0.22, 36.0, ambient=0.65),
+    "wizard": Material(0.78, 0.18, 30.0, ambient=0.68),
+    "trees": Material(0.86, 0.06, 12.0, ambient=0.72),
+    "stones": Material(0.72, 0.14, 24.0, ambient=0.65),
+    "angel": Material(0.74, 0.30, 56.0, ambient=0.70),
+    "ground": Material(0.90, 0.03, 10.0, ambient=0.82),
+    "tower_ground": Material(0.76, 0.16, 28.0, ambient=0.66),
+}
+tower.material = material_profiles["tower"]
+interior.circle.material = material_profiles["circle"]
+interior.witch.material = material_profiles["witch"]
+interior.wizard.material = material_profiles["wizard"]
+trees.asset.material = material_profiles["trees"]
+trees.materials = [
+    Material(0.84 + 0.01 * (index % 3), 0.05 + 0.01 * (index % 2),
+             12.0 + 2.0 * (index % 3), ambient=0.68 + 0.02 * (index % 3))
+    for index in range(len(trees.models))
+]
+graveyard.stone.material = material_profiles["stones"]
+graveyard.stone_materials = [
+    Material(0.70 + 0.02 * (index % 3), 0.12 + 0.02 * (index % 2),
+             20.0 + 4.0 * (index % 3), ambient=0.62 + 0.02 * (index % 3))
+    for index in range(len(graveyard.stone_models))
+]
+graveyard.angel.material = material_profiles["angel"]
+ground.material = material_profiles["ground"]
+tower_ground.material = material_profiles["tower_ground"]
+
 # Holofote fixo acima da torre, apontado para o chão.
 spotlight_max_height = 10.0
 spotlight_position = (0.0, spotlight_max_height, -30.0)
 spotlight_direction = (0.0, -1.0, 0.0)
 spotlight_color = (0.78, 0.86, 1.0)
-spotlight_inner_cutoff = float(np.cos(np.radians(18.0)))
-spotlight_outer_cutoff = float(np.cos(np.radians(28.0)))
+spotlight_inner_cutoff = float(np.cos(np.radians(12.0)))
+spotlight_outer_cutoff = float(np.cos(np.radians(20.0)))
 sun_direction = (0.35, 0.85, 0.40)
 sun_color = (1.0, 0.92, 0.78)
-sun_intensity =1.0 #Intensidade da luz do sol (0.0 a 1.0). 
+sun_intensity =0.10 #Intensidade da luz do sol (0.0 a 1.0). 
 sun_intensity_step = 0.05
 diffuse_enabled = True
 specular_enabled = True
+ambient_enabled = True
+spotlight_enabled = True
+demon_light_enabled = True
+interior_lighting_step = 0
 
 # Volume interno da torre em coordenadas de mundo (centro XZ e limites Y).
 sun_exclusion_center = (0.0, -30.0)
 sun_exclusion_radius = 3.5
 sun_exclusion_min_height = -2.0
 sun_exclusion_max_height = 14.0
+# Luz vermelha do círculo: curta e confinada ao volume interno da torre.
+demon_light_position = (
+    interior.circle_pivot[0],
+    interior.circle_pivot[1] + 0.35,
+    interior.circle_pivot[2],
+)
+demon_light_color = (1.0, 0.02, 0.01)
+demon_light_range = 16.0
 
 
 def configure_lighting(shader):
@@ -80,8 +125,6 @@ def configure_lighting(shader):
                     float(np.cos(np.radians(18.0))))
         glUniform1f(glGetUniformLocation(program, "angelOuterCutoff"),
                     float(np.cos(np.radians(28.0))))
-        glUniform1f(glGetUniformLocation(program, "ks"), 0.5)
-        glUniform1f(glGetUniformLocation(program, "ns"), 32.0)
         glUniform1f(glGetUniformLocation(program, "innerCutoff"), spotlight_inner_cutoff)
         glUniform1f(glGetUniformLocation(program, "outerCutoff"), spotlight_outer_cutoff)
         glUniform3f(glGetUniformLocation(program, "sunDirection"), *sun_direction)
@@ -95,6 +138,12 @@ def configure_lighting(shader):
                     sun_exclusion_min_height)
         glUniform1f(glGetUniformLocation(program, "sunExclusionMaxHeight"),
                     sun_exclusion_max_height)
+        glUniform3f(glGetUniformLocation(program, "demonLightPosition"),
+                    *demon_light_position)
+        glUniform3f(glGetUniformLocation(program, "demonLightColor"),
+                    *demon_light_color)
+        glUniform1f(glGetUniformLocation(program, "demonLightRange"),
+                    demon_light_range)
     finally:
         glUseProgram(previous_program)
 
@@ -114,6 +163,9 @@ for shader in scene_shaders:
         glGetUniformLocation(program, "viewPos"),
         glGetUniformLocation(program, "diffuseEnabled"),
         glGetUniformLocation(program, "specularEnabled"),
+        glGetUniformLocation(program, "ambientEnabled"),
+        glGetUniformLocation(program, "spotlightEnabled"),
+        glGetUniformLocation(program, "demonLightEnabled"),
         glGetUniformLocation(program, "sunIntensity"),
         glGetUniformLocation(program, "angelLightPosition"),
         glGetUniformLocation(program, "angelLightDirection"),
@@ -146,7 +198,8 @@ lastY =  altura/2
 
 def key_event(window,key,scancode,action,mods):
     global cameraPos, cameraFront, cameraUp, wireframe_mode
-    global diffuse_enabled, specular_enabled
+    global diffuse_enabled, specular_enabled, ambient_enabled
+    global spotlight_enabled, demon_light_enabled, interior_lighting_step
     global sun_intensity
 
     if key == glfw.KEY_ESCAPE and action == glfw.PRESS:
@@ -161,6 +214,22 @@ def key_event(window,key,scancode,action,mods):
         specular_enabled = not specular_enabled
         state = "ativada" if specular_enabled else "desativada"
         print(f"Iluminacao especular {state} (G)")
+    # H alterna só a contribuição ambiente, sem desligar as outras luzes.
+    if key == glfw.KEY_H and action == glfw.PRESS:
+        ambient_enabled = not ambient_enabled
+        state = "ativada" if ambient_enabled else "desativada"
+        print(f"Iluminacao ambiente {state} (H)")
+    if key == glfw.KEY_L and action == glfw.PRESS:
+        interior_lighting_step = (interior_lighting_step + 1) % 4
+        spotlight_enabled = interior_lighting_step in (0, 3)
+        demon_light_enabled = interior_lighting_step in (0, 1)
+        states = (
+            "todas as luzes internas ativadas",
+            "somente a luz vermelha do demoncircle ativada",
+            "ambos os focos internos desativados",
+            "somente o holofote branco da torre ativado",
+        )
+        print(f"{states[interior_lighting_step]} (L)")
     if key == glfw.KEY_PAGE_UP and action in (glfw.PRESS, glfw.REPEAT):
         previous_intensity = sun_intensity
         sun_intensity = min(1.0, sun_intensity + sun_intensity_step)
@@ -260,17 +329,6 @@ def projection():
     # Parâmetros: campo de visão vertical, proporção, plano próximo e plano distante.
     mat_projection = glm.perspective(glm.radians(fov), largura/altura, 0.1, 100.0)
 
-
-    # Exemplos para estudar os efeitos da projeção perspectiva.
-    # Testar:
-    #mat_projection = glm.perspective(glm.radians(45.0), largura/altura, 0.1, 40.0)
-    #mat_projection = glm.perspective(glm.radians(45.0), largura/altura, 40, 60.0)
-    #mat_projection = glm.perspective(glm.radians(45.0), largura/altura, 0.1, 100.0) #Original
-    # Campo de visão menor amplia os objetos; campo maior mostra mais do cenário.
-    #mat_projection = glm.perspective(glm.radians(10.0), largura/altura, 0.1, 100.0)
-    #mat_projection = glm.perspective(glm.radians(90.0), largura/altura, 0.1, 100.0)
-
-
     
     mat_projection = np.array(mat_projection)    
     return mat_projection
@@ -297,12 +355,16 @@ while not glfw.window_should_close(window):
     previous_program = int(glGetIntegerv(GL_CURRENT_PROGRAM))
     try:
         for (program, view_location, diffuse_location, specular_location,
+             ambient_location, spotlight_location, demon_location,
              sun_intensity_location, angel_position_location,
              angel_direction_location) in scene_uniforms:
             glUseProgram(program)
             glUniform3f(view_location, cameraPos.x, cameraPos.y, cameraPos.z)
             glUniform1i(diffuse_location, int(diffuse_enabled))
             glUniform1i(specular_location, int(specular_enabled))
+            glUniform1i(ambient_location, int(ambient_enabled))
+            glUniform1i(spotlight_location, int(spotlight_enabled))
+            glUniform1i(demon_location, int(demon_light_enabled))
             glUniform1f(sun_intensity_location, sun_intensity)
             glUniform3f(angel_position_location, *graveyard.light_position)
             glUniform3f(angel_direction_location, *graveyard.light_direction)

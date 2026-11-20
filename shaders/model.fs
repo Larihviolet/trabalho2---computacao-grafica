@@ -7,7 +7,6 @@ uniform vec3 baseColor;
 uniform bool hasTexture;
 uniform sampler2D diffuseMap;
 uniform float alphaCutoff;
-uniform bool emissive;
 uniform vec3 lightPosition;
 uniform vec3 lightDirection;
 uniform vec3 lightColor;
@@ -16,11 +15,20 @@ uniform vec3 angelLightDirection;
 uniform vec3 angelLightColor;
 uniform float angelInnerCutoff;
 uniform float angelOuterCutoff;
+uniform vec3 demonLightPosition;
+uniform vec3 demonLightColor;
+uniform float demonLightRange;
 uniform vec3 viewPos;
+// ka, kd, ks e ns são os coeficientes do material enviados por objeto.
+uniform float ka;
+uniform float kd;
 uniform float ks;
 uniform float ns;
+uniform bool ambientEnabled;
 uniform bool diffuseEnabled;
 uniform bool specularEnabled;
+uniform bool spotlightEnabled;
+uniform bool demonLightEnabled;
 uniform float innerCutoff;
 uniform float outerCutoff;
 uniform vec3 sunDirection;
@@ -38,21 +46,22 @@ void main() {
         if (texel.a < alphaCutoff) discard;
         color *= texel.rgb;
     }
-    if (emissive) {
-        fragmentColor = vec4(color, 1.0);
-        return;
-    }
     vec3 toLight = lightPosition - worldPosition;
     float distanceToLight = length(toLight);
     vec3 lightDir = normalize(toLight);
     float theta = dot(normalize(lightDirection), -lightDir);
-    float cone = clamp((theta - outerCutoff) / (innerCutoff - outerCutoff), 0.0, 1.0);
+    float cone = spotlightEnabled
+        ? clamp((theta - outerCutoff) / (innerCutoff - outerCutoff), 0.0, 1.0)
+        : 0.0;
     float attenuation = 1.0 / (1.0 + 0.007 * distanceToLight +
                                0.0002 * distanceToLight * distanceToLight);
     vec3 normal = normalize(worldNormal);
     vec3 viewDir = normalize(viewPos - worldPosition);
+    bool insideTower = worldPosition.y >= sunExclusionMinHeight &&
+                       worldPosition.y <= sunExclusionMaxHeight &&
+                       distance(worldPosition.xz, sunExclusionCenter) <= sunExclusionRadius;
     float diffuseFactor = max(dot(normal, lightDir), 0.0);
-    float diffuse = diffuseEnabled ? diffuseFactor : 0.0;
+    float diffuse = diffuseEnabled ? kd * diffuseFactor : 0.0;
     vec3 reflectDir = reflect(-lightDir, normal);
     float specularFactor = specularEnabled && diffuseFactor > 0.0
         ? pow(max(dot(viewDir, reflectDir), 0.0), max(ns, 1.0))
@@ -67,29 +76,47 @@ void main() {
     float angelAttenuation = 1.0 / (1.0 + 0.007 * angelDistance +
                                    0.0002 * angelDistance * angelDistance);
     float angelDiffuseFactor = max(dot(normal, angelLightDir), 0.0);
-    float angelDiffuse = diffuseEnabled ? angelDiffuseFactor : 0.0;
+    float angelDiffuse = diffuseEnabled ? kd * angelDiffuseFactor : 0.0;
     vec3 angelReflectDir = reflect(-angelLightDir, normal);
     float angelSpecularFactor = specularEnabled && angelDiffuseFactor > 0.0
         ? pow(max(dot(viewDir, angelReflectDir), 0.0), max(ns, 1.0))
         : 0.0;
     vec3 angelSpecular = ks * angelSpecularFactor * angelLightColor *
                          angelCone * angelAttenuation * 2.5;
-    bool insideTower = worldPosition.y >= sunExclusionMinHeight &&
-                       worldPosition.y <= sunExclusionMaxHeight &&
-                       distance(worldPosition.xz, sunExclusionCenter) <= sunExclusionRadius;
+    vec3 toDemonLight = demonLightPosition - worldPosition;
+    float demonDistance = length(toDemonLight);
+    float demonRangeFade = max(1.0 - demonDistance / demonLightRange, 0.0);
+    float demonAttenuation = demonLightEnabled && insideTower &&
+                             demonDistance < demonLightRange
+        ? demonRangeFade * demonRangeFade /
+          (1.0 + 0.09 * demonDistance + 0.032 * demonDistance * demonDistance)
+        : 0.0;
+    vec3 demonLightDir = demonDistance > 0.0001
+        ? toDemonLight / demonDistance
+        : normal;
+    float demonDiffuseFactor = max(dot(normal, demonLightDir), 0.0);
+    float demonDiffuse = diffuseEnabled ? kd * demonDiffuseFactor : 0.0;
+    vec3 demonReflectDir = reflect(-demonLightDir, normal);
+    float demonSpecularFactor = specularEnabled && demonDiffuseFactor > 0.0
+        ? pow(max(dot(viewDir, demonReflectDir), 0.0), max(ns, 1.0))
+        : 0.0;
+    vec3 demonContribution = demonLightColor *
+        (demonDiffuse + ks * demonSpecularFactor) * demonAttenuation * 2.5;
     vec3 sunLightDir = normalize(sunDirection);
     float sunDiffuseFactor = max(dot(normal, sunLightDir), 0.0);
-    float sunDiffuse = !insideTower && diffuseEnabled ? sunDiffuseFactor : 0.0;
+    float sunDiffuse = !insideTower && diffuseEnabled ? kd * sunDiffuseFactor : 0.0;
     vec3 sunReflectDir = reflect(-sunLightDir, normal);
     float sunSpecularFactor = !insideTower && specularEnabled && sunDiffuseFactor > 0.0
         ? pow(max(dot(viewDir, sunReflectDir), 0.0), max(ns, 1.0))
         : 0.0;
     vec3 sunSpecular = ks * sunSpecularFactor * sunColor * sunIntensity;
-    vec3 illumination = vec3(0.22) +
+    vec3 ambient = ambientEnabled ? vec3(0.22 * ka) : vec3(0.0);
+    vec3 illumination = ambient +
                         lightColor * diffuse * cone * attenuation * 2.5 +
                         specular +
                         angelLightColor * angelDiffuse * angelCone * angelAttenuation * 2.5 +
                         angelSpecular +
+                        demonContribution +
                         sunColor * sunDiffuse * sunIntensity +
                         sunSpecular;
     fragmentColor = vec4(color * illumination, 1.0);
