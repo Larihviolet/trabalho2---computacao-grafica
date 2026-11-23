@@ -105,7 +105,7 @@ demon_light_position = (
     interior.circle_pivot[2],
 )
 demon_light_color = (1.0, 0.02, 0.01)
-demon_light_range = 16.0
+demon_light_range = 20.0
 
 
 def configure_lighting(shader):
