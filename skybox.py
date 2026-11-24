@@ -1,5 +1,4 @@
-﻿#Renderiza um fundo panorâmico a partir de uma imagem em cruz 4x3.
-
+﻿
 from pathlib import Path
 
 import numpy as np
@@ -12,6 +11,9 @@ from shader_s import Shader
 def load_cross_faces(path):
     #Recorta as seis faces de uma imagem de cubemap em cruz 4x3.
     #Faces RGB na ordem OpenGL: +X, -X, +Y, -Y, +Z e -Z.
+#    [1,0] (+Y)
+#[0,1] [1,1] [2,1] [3,1]  --> (-X, +Z, +X, -Z)
+#    [1,2] (-Y)
 
     with Image.open(path) as source:
         width, height = source.size
@@ -23,7 +25,7 @@ def load_cross_faces(path):
         return [atlas.crop((x * size, y * size, (x + 1) * size,
                             (y + 1) * size)) for x, y in cells]
 
-
+# Após pegar as faces da cruz, é gerado o cubemap. 
 class Skybox:
     def __init__(self, cubemap_path):
 
@@ -57,6 +59,24 @@ class Skybox:
         self.sampler = glGetUniformLocation(program, "skybox")
         self._projection_source = None
         self._inverse_projection_matrix = None
+
+# Utilizando o Vertex Pulling, o shader de vértice não precisa de nenhum atributo de entrada. 
+# Ele gera os vértices do triângulo a partir do ID do vértice glDrawArrays(GL_TRIANGLES, 0, 3), utilizando a variável automática gl_VertexID no shader da skybox.
+# Como o triângulo vai de (-1,-1) até (3,-1) e (-1,3), o quadrado da tela fica inteiro dentro dele, e a GPU utiliza o clipping para recortar as pontas que estão para fora. 
+# O que sobra é exatamente um retângulo perfeito cobrindo 100% da tela.
+    #(-1, 3)
+    #     |\
+    #      | \
+    #      |  \
+    #  +--|---+--+  <-- Borda superior da tela (y = 1)
+    #   |  |   |  |
+    #   |  |   |  |  <--Tela (vai de -1 a +1 em X e Y)
+    #   |  |   |  |
+    #  +--|---+--+  <-- Borda inferior da tela (y = -1)
+    #(-1,-1)------(3, -1)
+
+# Para cada pixel, o shader conhece apenas a posição 2d na tela. Então, utiliza -se as matrizes inversas da câmera: projection e view. 
+# Dessa forma, o shader pega o ponto 2d e calcula uma seta 3d que aponta dentro do cubemap. A partir dessa seta, o shader pega a cor do cubemap e pinta o pixel da tela. 
 
     def draw(self, view, projection):
         previous_program = int(glGetIntegerv(GL_CURRENT_PROGRAM))

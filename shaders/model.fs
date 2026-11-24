@@ -145,7 +145,8 @@ void main() {
                         demonContribution +
                         sunColor * sunDiffuse * sunIntensity +
                         sunSpecular +
-                        (demonCircleGlow && demonLightEnabled
+                        (demonCircleGlow && demonLightEnabled &&
+                         (diffuseEnabled || specularEnabled || ambientEnabled)
                             ? demonLightColor * 0.65
                             : vec3(0.0));
     fragmentColor = vec4(color * illumination, 1.0);

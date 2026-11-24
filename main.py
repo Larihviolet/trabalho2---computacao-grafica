@@ -24,8 +24,8 @@ LIGHTING_MIXED = 2
 glfw.init()
 glfw.window_hint(glfw.VISIBLE, glfw.FALSE)
 
-window_height = 700
-window_width =700
+window_height = 1000
+window_width =1000
 
 window = glfw.create_window(window_width, window_height, "O Ritual de Toadbert", None, None)
 
@@ -96,7 +96,7 @@ spotlight_inner_cutoff = float(np.cos(np.radians(12.0)))
 spotlight_outer_cutoff = float(np.cos(np.radians(20.0)))
 # Luz do sol simulada como uma fonte direcional distante, com intensidade ajustável.
 sun_direction = (0.35, 0.85, 0.40)
-sun_color = (1.0, 0.92, 0.78)
+sun_color =  (0.6, 0.2, 0.6)                   
 sun_intensity =0.10 #Intensidade da luz do sol (0.0 a 1.0). 
 sun_intensity_step = 0.05
 interior_ambient_intensity = 0.15
@@ -178,11 +178,13 @@ def configure_lighting(shader, lighting_zone):
 
 
 scene_shaders = [(tower.shader, LIGHTING_MIXED)]
+# O piso circular cruza o limite da torre; os fragmentos internos devem receber luz interna.
+scene_shaders.append((tower_ground.shader, LIGHTING_MIXED))
 scene_shaders.extend((obj.shader, LIGHTING_INTERIOR) for obj in interior.objects)
 scene_shaders.extend(
     (shader, LIGHTING_EXTERIOR)
     for shader in (trees.asset.shader, graveyard.stone.shader, graveyard.angel.shader,
-                   ground.shader, tower_ground.shader, fence.shader)
+                   ground.shader, fence.shader)
 )
 for scene_shader, lighting_zone in scene_shaders:
     configure_lighting(scene_shader, lighting_zone)
@@ -447,7 +449,9 @@ while not glfw.window_should_close(window):
     trees.draw(mat_view, mat_projection)
     graveyard.draw(mat_view, mat_projection)
     skybox.draw(mat_view, mat_projection)
-    light_marker.draw(mat_view, mat_projection)
+    # O marcador emissivo só aparece enquanto alguma contribuição de iluminação estiver ativa.
+    if diffuse_enabled or specular_enabled or ambient_enabled:
+        light_marker.draw(mat_view, mat_projection)
     
     glfw.swap_buffers(window)
 
