@@ -1,4 +1,4 @@
-# Fundo panorâmico por direções de visão, sem geometria de cubo.
+﻿"""Renderiza um fundo panorÃ¢mico a partir de uma imagem em cruz 4x3."""
 
 from pathlib import Path
 
@@ -10,9 +10,17 @@ from shader_s import Shader
 
 
 def load_cross_faces(path):
-    # Recorta uma cruz 4x3: esquerda, frente, direita, trás; cima e baixo.
-    # Retorna RGB na ordem OpenGL: +X, -X, +Y, -Y, +Z, -Z.
-    # Mantém as linhas na orientação da imagem, sem inversão vertical.
+    """Recorta as seis faces de uma imagem de cubemap em cruz 4x3.
+
+    Args:
+        path: Caminho da imagem de origem.
+
+    Returns:
+        Faces RGB na ordem OpenGL: +X, -X, +Y, -Y, +Z e -Z.
+
+    Raises:
+        ValueError: Se a imagem nÃ£o for uma cruz 4x3 com faces quadradas.
+    """
     with Image.open(path) as source:
         width, height = source.size
         if width % 4 or height % 3 or width // 4 != height // 3:
@@ -25,7 +33,14 @@ def load_cross_faces(path):
 
 
 class Skybox:
+    """Fundo de cena amostrado por direÃ§Ã£o de visÃ£o."""
+
     def __init__(self, cubemap_path):
+        """Carrega o cubemap e cria seus recursos OpenGL.
+
+        Args:
+            cubemap_path: Caminho da imagem de cubemap em cruz 4x3.
+        """
         faces = load_cross_faces(cubemap_path)
         shader_dir = Path(__file__).resolve().parent / "shaders"
         self.shader = Shader(str(shader_dir / "skybox.vs"),
@@ -48,30 +63,44 @@ class Skybox:
         finally:
             glPixelStorei(GL_UNPACK_ALIGNMENT, alignment)
             glBindTexture(GL_TEXTURE_CUBE_MAP, previous_texture)
-        program = self.shader.getProgram()
+        program = self.shader.get_program()
         self.inverse_projection = glGetUniformLocation(program, "inverseProjection")
-        self.inverse_view_rotation = glGetUniformLocation(program, "inverseViewRotation")
+        self.inverse_view_rotation = glGetUniformLocation(
+            program, "inverseViewRotation")
         self.sampler = glGetUniformLocation(program, "skybox")
+        self._projection_source = None
+        self._inverse_projection_matrix = None
 
     def draw(self, view, projection):
-        # Desenha no plano distante e restaura o estado da cena.
+        """Desenha o cÃ©u e restaura o estado OpenGL anterior.
+
+        Args:
+            view: Matriz de visualizaÃ§Ã£o 4x4.
+            projection: Matriz de projeÃ§Ã£o 4x4.
+        """
         previous_program = int(glGetIntegerv(GL_CURRENT_PROGRAM))
         previous_vao = int(glGetIntegerv(GL_VERTEX_ARRAY_BINDING))
         depth_function = int(glGetIntegerv(GL_DEPTH_FUNC))
         depth_mask = bool(glGetBooleanv(GL_DEPTH_WRITEMASK))
-        polygon_mode = glGetIntegerv(GL_POLYGON_MODE)
         active_texture = int(glGetIntegerv(GL_ACTIVE_TEXTURE))
         seamless = bool(glIsEnabled(GL_TEXTURE_CUBE_MAP_SEAMLESS))
         culling = bool(glIsEnabled(GL_CULL_FACE))
         glActiveTexture(GL_TEXTURE0)
         previous_texture = int(glGetIntegerv(GL_TEXTURE_BINDING_CUBE_MAP))
+        if projection is not self._projection_source:
+            self._projection_source = projection
+            self._inverse_projection_matrix = np.linalg.inv(
+                projection).astype(np.float32)
+        # A inversa de uma matriz de rotação ortonormal é sua transposta.
+        inverse_view_rotation = np.ascontiguousarray(
+            view[:3, :3].T, dtype=np.float32)
         try:
             self.shader.use()
             glUniformMatrix4fv(self.inverse_projection, 1, GL_TRUE,
-                               np.linalg.inv(projection).astype(np.float32))
-            # Só a rotação: o céu permanece infinitamente distante.
+                               self._inverse_projection_matrix)
+            # SÃ³ a rotaÃ§Ã£o: o cÃ©u permanece infinitamente distante.
             glUniformMatrix3fv(self.inverse_view_rotation, 1, GL_TRUE,
-                               np.linalg.inv(view[:3, :3]).astype(np.float32))
+                               inverse_view_rotation)
             glUniform1i(self.sampler, 0)
             glBindTexture(GL_TEXTURE_CUBE_MAP, self.texture)
             glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS)
@@ -86,8 +115,6 @@ class Skybox:
             glActiveTexture(active_texture)
             glDepthFunc(depth_function)
             glDepthMask(depth_mask)
-            glPolygonMode(GL_FRONT, int(polygon_mode[0]))
-            glPolygonMode(GL_BACK, int(polygon_mode[1]))
             if not seamless:
                 glDisable(GL_TEXTURE_CUBE_MAP_SEAMLESS)
             if culling:
@@ -95,7 +122,7 @@ class Skybox:
             glUseProgram(previous_program)
 
     def close(self):
-        # Libera recursos enquanto o contexto OpenGL ainda está ativo.
+        """Libera os recursos do cubemap e shader."""
         glDeleteTextures(1, [self.texture])
         glDeleteVertexArrays(1, [self.vao])
-        glDeleteProgram(self.shader.getProgram())
+        glDeleteProgram(self.shader.get_program())

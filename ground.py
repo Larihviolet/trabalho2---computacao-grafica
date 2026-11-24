@@ -1,4 +1,4 @@
-# Chão plano com textura repetida e recursos OpenGL próprios.
+﻿"""Gera e renderiza pisos texturizados usando recursos OpenGL prÃ³prios."""
 
 import ctypes
 from pathlib import Path
@@ -7,11 +7,24 @@ import numpy as np
 from PIL import Image
 from OpenGL.GL import *
 
-from material import DEFAULT_MATERIAL
 from shader_s import Shader
 
 
 def _make_vertices(size, height, center, shape):
+    """Cria vÃ©rtices triangulados para um piso quadrado ou circular.
+
+    Args:
+        size: Largura do piso ou diÃ¢metro do cÃ­rculo.
+        height: Coordenada Y do piso.
+        center: Centro do piso nas coordenadas X e Z.
+        shape: Forma, ``"square"`` ou ``"circle"``.
+
+    Returns:
+        Array float32 de posiÃ§Ãµes XYZ em triÃ¢ngulos.
+
+    Raises:
+        ValueError: Se ``shape`` nÃ£o for reconhecida.
+    """
     half = size / 2.0
     if shape == "square":
         return np.array([
@@ -35,26 +48,43 @@ def _make_vertices(size, height, center, shape):
         vertices[:, 1, :] = perimeter[:-1]
         vertices[:, 2, :] = perimeter[1:]
         return vertices.reshape(-1, 3)
-    raise ValueError("A forma do chão deve ser 'square' ou 'circle'.")
+    raise ValueError("A forma do chÃ£o deve ser 'square' ou 'circle'.")
 
 
 class Ground:
+    """Piso texturizado, com geometria e buffers prÃ³prios."""
+
     def __init__(self, size=200.0, height=-2.0, color=(1.0, 1.0, 1.0),
                  texture_path=None, tile_size=4.0, center=(0.0, 0.0), shape="square"):
+        """Cria a geometria, shader e textura do piso.
+
+        Args:
+            size: Largura do piso ou diÃ¢metro do cÃ­rculo.
+            height: Coordenada Y do piso.
+            color: Cor base RGB.
+            texture_path: Textura opcional a repetir na superfÃ­cie.
+            tile_size: Escala de repetiÃ§Ã£o da textura.
+            center: Centro do piso nas coordenadas X e Z.
+            shape: Forma, ``"square"`` ou ``"circle"``.
+
+        Raises:
+            ValueError: Se o tamanho ou a escala da textura nÃ£o forem positivos.
+        """
         if size <= 0:
-            raise ValueError("O tamanho do chão deve ser positivo.")
+            raise ValueError("O tamanho do chÃ£o deve ser positivo.")
         if tile_size <= 0:
-            raise ValueError("O tamanho de repetição da textura deve ser positivo.")
+            raise ValueError("O tamanho de repetiÃ§Ã£o da textura deve ser positivo.")
         self.size = size
         self.height = height
         # Ler antes de criar recursos OpenGL permite falhar cedo se o arquivo faltar.
         image = None
         if texture_path is not None:
             with Image.open(texture_path) as source:
-                image = source.convert("RGBA").transpose(Image.Transpose.FLIP_TOP_BOTTOM)
+                image = source.convert("RGBA").transpose(
+                    Image.Transpose.FLIP_TOP_BOTTOM)
         self.color = color
         self.tile_size = tile_size
-        self.material = DEFAULT_MATERIAL
+        self.material = None
         self.texture = 0
         shader_dir = Path(__file__).resolve().parent / "shaders"
         self.shader = Shader(str(shader_dir / "ground.vs"),
@@ -74,7 +104,7 @@ class Ground:
         finally:
             glBindVertexArray(previous_vao)
             glBindBuffer(GL_ARRAY_BUFFER, previous_buffer)
-        program = self.shader.getProgram()
+        program = self.shader.get_program()
         self.view_location = glGetUniformLocation(program, "view")
         self.projection_location = glGetUniformLocation(program, "projection")
         self.color_location = glGetUniformLocation(program, "groundColor")
@@ -82,7 +112,7 @@ class Ground:
         self.sampler_location = glGetUniformLocation(program, "grassTexture")
         self.has_texture_location = glGetUniformLocation(program, "hasTexture")
         self.material_locations = {
-            name: glGetUniformLocation(program, name) for name in ("ka", "kd", "ks", "ns")
+            name: glGetUniformLocation(program, name) for name in ("kd", "ks", "ns")
         }
         if image is not None:
             self.texture = glGenTextures(1)
@@ -93,16 +123,24 @@ class Ground:
                              0, GL_RGBA, GL_UNSIGNED_BYTE, image.tobytes())
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR)
+                glTexParameteri(
+                    GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR)
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
                 glGenerateMipmap(GL_TEXTURE_2D)
             finally:
                 glBindTexture(GL_TEXTURE_2D, previous_texture)
 
     def draw(self, view, projection):
+        """Desenha o piso com as matrizes de cÃ¢mera fornecidas.
+
+        Args:
+            view: Matriz de visualizaÃ§Ã£o 4x4.
+            projection: Matriz de projeÃ§Ã£o 4x4.
+        """
+        if self.material is None:
+            raise RuntimeError("Ã‰ necessÃ¡rio atribuir um material antes de desenhar o chÃ£o.")
         previous_program = int(glGetIntegerv(GL_CURRENT_PROGRAM))
         previous_vao = int(glGetIntegerv(GL_VERTEX_ARRAY_BINDING))
-        polygon_mode = glGetIntegerv(GL_POLYGON_MODE)
         active_texture = int(glGetIntegerv(GL_ACTIVE_TEXTURE))
         glActiveTexture(GL_TEXTURE0)
         previous_texture = int(glGetIntegerv(GL_TEXTURE_BINDING_2D))
@@ -114,7 +152,6 @@ class Ground:
             glUniform1f(self.tile_size_location, self.tile_size)
             glUniform1i(self.sampler_location, 0)
             glUniform1i(self.has_texture_location, bool(self.texture))
-            glUniform1f(self.material_locations["ka"], self.material.ambient)
             glUniform1f(self.material_locations["kd"], self.material.diffuse)
             glUniform1f(self.material_locations["ks"], self.material.specular)
             glUniform1f(self.material_locations["ns"], self.material.shininess)
@@ -125,14 +162,13 @@ class Ground:
             glBindTexture(GL_TEXTURE_2D, previous_texture)
             glActiveTexture(active_texture)
             glBindVertexArray(previous_vao)
-            glPolygonMode(GL_FRONT, int(polygon_mode[0]))
-            glPolygonMode(GL_BACK, int(polygon_mode[1]))
             glUseProgram(previous_program)
 
     def close(self):
+        """Libera os recursos OpenGL pertencentes ao piso."""
         # Liberar antes de encerrar o contexto OpenGL.
         glDeleteBuffers(1, [self.vbo])
         glDeleteVertexArrays(1, [self.vao])
         if self.texture:
             glDeleteTextures(1, [self.texture])
-        glDeleteProgram(self.shader.getProgram())
+        glDeleteProgram(self.shader.get_program())
