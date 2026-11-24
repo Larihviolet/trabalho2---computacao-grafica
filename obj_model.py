@@ -200,9 +200,12 @@ class ObjModel:
                 glCullFace(GL_BACK)
                 glEnable(GL_CULL_FACE)
             self.shader.use()
-            matrices = (('model', self.model), ('view', view),
-                        ('projection', projection))
-            for name, matrix in matrices:
+            uniform_matrices = (
+                ('model', self.model),
+                ('view', view),
+                ('projection', projection),
+            )
+            for name, matrix in uniform_matrices:
                 glUniformMatrix4fv(self.locations[name], 1, GL_TRUE, matrix)
             glUniform1i(self.locations['diffuseMap'], 0)
             glUniform1f(self.locations['alphaCutoff'], alpha_cutoff)

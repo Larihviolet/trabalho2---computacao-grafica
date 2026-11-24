@@ -24,8 +24,8 @@ LIGHTING_MIXED = 2
 glfw.init()
 glfw.window_hint(glfw.VISIBLE, glfw.FALSE)
 
-window_height = 1400
-window_width = 1400
+window_height = 700
+window_width =700
 
 window = glfw.create_window(window_width, window_height, "Programa", None, None)
 
