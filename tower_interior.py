@@ -1,4 +1,4 @@
-"""Configura e atualiza os objetos do ritual dentro da torre."""
+#Configura e atualiza os objetos do ritual dentro da torre.
 
 from pathlib import Path
 
@@ -9,15 +9,7 @@ from obj_model import ObjModel
 
 
 def around_pivot(pivot, transform):
-    """Aplica uma transformação mantendo fixo o ponto de apoio.
-
-    Args:
-        pivot: Pivô XYZ em coordenadas de mundo.
-        transform: Matriz 4x4 de rotação ou escala.
-
-    Returns:
-        Matriz de transformação float32.
-    """
+    #Aplica uma transformação mantendo fixo o ponto de apoio.
     # A composição translada ao pivô, transforma e translada de volta.
     translation = glm.translate(glm.mat4(1.0), glm.vec3(*pivot))
     inverse_translation = glm.translate(glm.mat4(1.0), -glm.vec3(*pivot))
@@ -25,15 +17,11 @@ def around_pivot(pivot, transform):
 
 
 class TowerInterior:
-    """Modelos do círculo ritual, da bruxa e do mago dentro da torre."""
+    #Modelos do círculo ritual, da bruxa e do mago dentro da torre.
 
     def __init__(self, center=(0.0, -30.0), floor_height=-2.0):
-        """Carrega e posiciona os modelos internos da torre.
+       #Carrega e posiciona os modelos internos da torre.
 
-        Args:
-            center: Centro X e Z da torre.
-            floor_height: Altura do chão interno.
-        """
         root = Path(__file__).resolve().parent / "objetos"
         x, z = center
         self.circle = ObjModel(
@@ -66,11 +54,8 @@ class TowerInterior:
         self.update(0.0)
 
     def update(self, delta_time):
-        """Atualiza a rotação contínua do círculo ritual.
-
-        Args:
-            delta_time: Tempo desde a atualização anterior, em segundos.
-        """
+        #Atualiza a rotação contínua do círculo ritual.
+        #delta_time: Tempo desde a atualização anterior, em segundos.
         elapsed = max(float(delta_time), 0.0)
         self.circle_angle = (self.circle_angle + self.circle_speed * elapsed) % 360.0
         rotation = glm.rotate(
@@ -78,18 +63,13 @@ class TowerInterior:
         self.circle.model = around_pivot(self.circle_pivot, rotation) @ self.circle_base
 
     def draw(self, view, projection):
-        """Desenha o círculo, a bruxa e o mago.
-
-        Args:
-            view: Matriz de visualização 4x4.
-            projection: Matriz de projeção 4x4.
-        """
+       #Desenha o círculo, a bruxa e o mago.
         for obj in self.objects:
             obj.draw(view, projection, alpha_cutoff=0.5,
                      cull_back_faces=obj is not self.circle,
                      demon_circle_glow=obj is self.circle)
 
     def close(self):
-        """Libera os recursos OpenGL dos objetos internos."""
+        #Libera os recursos OpenGL dos objetos internos.
         for obj in self.objects:
             obj.close()

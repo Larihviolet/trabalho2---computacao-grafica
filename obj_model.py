@@ -1,4 +1,4 @@
-﻿"""Carrega malhas OBJ/MTL e desenha instÃ¢ncias usando buffers OpenGL."""
+﻿#Carrega malhas OBJ/MTL e desenha instâncias usando buffers OpenGL.
 
 import ctypes
 from pathlib import Path
@@ -7,19 +7,12 @@ import glm
 import numpy as np
 from PIL import Image
 from OpenGL.GL import *
-
 from shader_s import Shader
 
 
 def load_obj(path):
-    """Carrega e triangula uma malha OBJ com seus materiais.
+    #Carrega e triangula uma malha OBJ com seus materiais.
 
-    Args:
-        path: Caminho do arquivo OBJ.
-
-    Returns:
-        Tupla com vÃ©rtices expandidos, lotes de material e dados dos materiais.
-    """
     positions, uvs, normals, vertices, batches = [], [], [], [], []
     colors = []
     materials = {}
@@ -63,7 +56,7 @@ def load_obj(path):
                     for corner in (values[0], values[index], values[index + 1]):
                         indices = corner.split('/')
                         def resolve(items, value):
-                            """Resolve Ã­ndices OBJ positivos e relativos."""
+                            #Resolve Ã­ndices OBJ positivos e relativos.
                             idx = int(value)
                             return items[idx - 1 if idx > 0 else idx]
                         position = resolve(positions, indices[0])
@@ -75,7 +68,7 @@ def load_obj(path):
                         vertices.append((*position, *uv, *normal, *color))
                         batches[-1][1] += 1
     data = np.array(vertices, dtype=np.float32)
-    # Calcula normais de face quando o OBJ nÃ£o fornece normais.
+    # Calcula normais de face quando o OBJ não fornece normais.
     triangles = data[:, :3].reshape(-1, 3, 3)
     edge_a = triangles[:, 1] - triangles[:, 0]
     edge_b = triangles[:, 2] - triangles[:, 0]
@@ -88,26 +81,14 @@ def load_obj(path):
 
 
 class ObjModel:
-    """Malha OBJ com recursos GPU e transformaÃ§Ãµes para uma instÃ¢ncia."""
+    #Malha OBJ com recursos GPU e transformações para uma instância.
 
     def __init__(
             self, path, width=18.0, ground_height=-2.0,
             center=(0.0, -30.0), height=None,
             rotation_x=0.0, rotation_z=0.0):
-        """Carrega a malha, prepara buffers e calcula a transformaÃ§Ã£o inicial.
+        #Carrega a malha, prepara buffers e calcula a transformação inicial.
 
-        Args:
-            path: Caminho do arquivo OBJ.
-            width: Largura alvo quando ``height`` nÃ£o Ã© fornecido.
-            ground_height: Altura da base do objeto.
-            center: Coordenadas X e Z do centro.
-            height: Altura alvo opcional.
-            rotation_x: RotaÃ§Ã£o inicial em graus ao redor do eixo X.
-            rotation_z: RotaÃ§Ã£o inicial em graus ao redor do eixo Z.
-
-        Raises:
-            ValueError: Se as dimensÃµes ou o tamanho alvo forem invÃ¡lidos.
-        """
         vertices, self.batches, self.materials = load_obj(Path(path))
         if rotation_x:
             rotation_matrix = glm.rotate(
@@ -187,21 +168,13 @@ class ObjModel:
 
     def draw(self, view, projection, models=None, alpha_cutoff=0.0, materials=None,
              cull_back_faces=True, demon_circle_glow=False):
-        """Desenha uma ou mais instÃ¢ncias da malha.
+        #Desenha uma ou mais instâncias da malha.
 
-        Args:
-            view: Matriz de visualizaÃ§Ã£o 4x4.
-            projection: Matriz de projeÃ§Ã£o 4x4.
-            models: Matrizes de modelo opcionais para instÃ¢ncias compartilhadas.
-            alpha_cutoff: Limite de transparÃªncia para recorte da textura.
-            materials: Material por instÃ¢ncia, quando fornecido.
-            cull_back_faces: Se deve descartar faces traseiras.
-            demon_circle_glow: Se deve adicionar brilho prÃ³prio vermelho.
+        #  models: Matrizes de modelo opcionais para instâncias compartilhadas.
+        #  alpha_cutoff: Limite de transparência para recorte da textura.
+        #  materials: Material por instância, quando fornecido.
+        # cull_back_faces: Se deve descartar faces traseiras.
 
-        Raises:
-            RuntimeError: Se faltar material para uma instÃ¢ncia.
-            ValueError: Se a quantidade de materiais e instÃ¢ncias divergir.
-        """
         matrices = tuple(models if models is not None else (self.model,))
         if materials is None:
             if self.material is None:
@@ -237,7 +210,7 @@ class ObjModel:
                 glUniform1i(self.locations['demonCircleGlow'], demon_circle_glow)
                 self._demon_circle_glow = demon_circle_glow
             glBindVertexArray(self.vao)
-            # As cÃ³pias compartilham a mesma malha, texturas e programa de sombreadores.
+            # As cópias compartilham a mesma malha, texturas e programa de sombreadores.
             for matrix, instance_material in zip(matrices, draw_materials):
                 glUniformMatrix4fv(self.locations['model'], 1, GL_TRUE, matrix)
                 glUniform1f(self.locations['kd'], instance_material.diffuse)
@@ -266,7 +239,7 @@ class ObjModel:
             glUseProgram(previous_program)
 
     def close(self):
-        """Libera buffers, texturas e shader pertencentes ao modelo."""
+        #Libera buffers, texturas e shader pertencentes ao modelo.
         glDeleteBuffers(1, [self.vbo])
         glDeleteVertexArrays(1, [self.vao])
         if self.textures:

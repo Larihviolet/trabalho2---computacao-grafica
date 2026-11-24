@@ -1,4 +1,4 @@
-﻿"""Gera e renderiza pisos texturizados usando recursos OpenGL prÃ³prios."""
+﻿#Gera e renderiza pisos texturizados usando recursos OpenGL próprios.
 
 import ctypes
 from pathlib import Path
@@ -6,25 +6,11 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 from OpenGL.GL import *
-
 from shader_s import Shader
 
 
 def _make_vertices(size, height, center, shape):
-    """Cria vÃ©rtices triangulados para um piso quadrado ou circular.
-
-    Args:
-        size: Largura do piso ou diÃ¢metro do cÃ­rculo.
-        height: Coordenada Y do piso.
-        center: Centro do piso nas coordenadas X e Z.
-        shape: Forma, ``"square"`` ou ``"circle"``.
-
-    Returns:
-        Array float32 de posiÃ§Ãµes XYZ em triÃ¢ngulos.
-
-    Raises:
-        ValueError: Se ``shape`` nÃ£o for reconhecida.
-    """
+    #Cria vértices triangulados para um piso quadrado ou circular.
     half = size / 2.0
     if shape == "square":
         return np.array([
@@ -48,32 +34,20 @@ def _make_vertices(size, height, center, shape):
         vertices[:, 1, :] = perimeter[:-1]
         vertices[:, 2, :] = perimeter[1:]
         return vertices.reshape(-1, 3)
-    raise ValueError("A forma do chÃ£o deve ser 'square' ou 'circle'.")
+    raise ValueError("A forma do chão deve ser 'square' ou 'circle'.")
 
 
 class Ground:
-    """Piso texturizado, com geometria e buffers prÃ³prios."""
+    #Piso texturizado, com geometria e buffers próprios.
 
     def __init__(self, size=200.0, height=-2.0, color=(1.0, 1.0, 1.0),
                  texture_path=None, tile_size=4.0, center=(0.0, 0.0), shape="square"):
-        """Cria a geometria, shader e textura do piso.
+        #Cria a geometria, shader e textura do piso.
 
-        Args:
-            size: Largura do piso ou diÃ¢metro do cÃ­rculo.
-            height: Coordenada Y do piso.
-            color: Cor base RGB.
-            texture_path: Textura opcional a repetir na superfÃ­cie.
-            tile_size: Escala de repetiÃ§Ã£o da textura.
-            center: Centro do piso nas coordenadas X e Z.
-            shape: Forma, ``"square"`` ou ``"circle"``.
-
-        Raises:
-            ValueError: Se o tamanho ou a escala da textura nÃ£o forem positivos.
-        """
         if size <= 0:
-            raise ValueError("O tamanho do chÃ£o deve ser positivo.")
+            raise ValueError("O tamanho do chão deve ser positivo.")
         if tile_size <= 0:
-            raise ValueError("O tamanho de repetiÃ§Ã£o da textura deve ser positivo.")
+            raise ValueError("O tamanho de repetição da textura deve ser positivo.")
         self.size = size
         self.height = height
         # Ler antes de criar recursos OpenGL permite falhar cedo se o arquivo faltar.
@@ -131,14 +105,10 @@ class Ground:
                 glBindTexture(GL_TEXTURE_2D, previous_texture)
 
     def draw(self, view, projection):
-        """Desenha o piso com as matrizes de cÃ¢mera fornecidas.
+      #Desenha o piso com as matrizes de câmera fornecidas.
 
-        Args:
-            view: Matriz de visualizaÃ§Ã£o 4x4.
-            projection: Matriz de projeÃ§Ã£o 4x4.
-        """
         if self.material is None:
-            raise RuntimeError("Ã‰ necessÃ¡rio atribuir um material antes de desenhar o chÃ£o.")
+            raise RuntimeError("É necessária atribuir um material antes de desenhar o chão.")
         previous_program = int(glGetIntegerv(GL_CURRENT_PROGRAM))
         previous_vao = int(glGetIntegerv(GL_VERTEX_ARRAY_BINDING))
         active_texture = int(glGetIntegerv(GL_ACTIVE_TEXTURE))
@@ -165,8 +135,7 @@ class Ground:
             glUseProgram(previous_program)
 
     def close(self):
-        """Libera os recursos OpenGL pertencentes ao piso."""
-        # Liberar antes de encerrar o contexto OpenGL.
+      #Libera os recursos OpenGL pertencentes ao piso.
         glDeleteBuffers(1, [self.vbo])
         glDeleteVertexArrays(1, [self.vao])
         if self.texture:

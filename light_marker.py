@@ -1,4 +1,4 @@
-﻿"""Gera e desenha a esfera visÃ­vel que marca a posiÃ§Ã£o do holofote."""
+﻿#Gera e desenha a esfera visível que marca a posição do holofote.
 
 import ctypes
 from pathlib import Path
@@ -10,15 +10,12 @@ from shader_s import Shader
 
 
 def _sphere_vertices(sectors, stacks):
-    """Gera triÃ¢ngulos unitÃ¡rios para uma esfera UV.
+    #Gera triângulos unitários para uma esfera UV.
 
-    Args:
-        sectors: DivisÃµes angulares ao redor do eixo vertical.
-        stacks: DivisÃµes ao longo do eixo vertical.
+    #Args:
+    #    sectors: Divisões angulares ao redor do eixo vertical.
+    #    stacks: Divisões ao longo do eixo vertical.
 
-    Returns:
-        Array float32 de posiÃ§Ãµes XYZ trianguladas.
-    """
     vertices = []
     for stack in range(stacks):
         upper = np.pi * stack / stacks
@@ -41,30 +38,27 @@ def _sphere_vertices(sectors, stacks):
 
 
 class LightMarker:
-    """Esfera colorida posicionada junto Ã  luz do holofote."""
+    #Esfera colorida posicionada junto à luz do holofote.
 
     def __init__(self, position, color, radius=0.35, sectors=24, stacks=16):
-        """Cria a esfera e envia sua malha para a GPU.
+        #Cria a esfera e envia sua malha para a GPU.
 
-        Args:
-            position: PosiÃ§Ã£o XYZ do marcador.
-            color: Cor RGB do marcador.
-            radius: Raio da esfera.
-            sectors: DivisÃµes angulares da malha.
-            stacks: DivisÃµes verticais da malha.
+        #Args:
+           # position: Posição XYZ do marcador.
+           # color: Cor RGB do marcador.
+           # radius: Raio da esfera.
+           # sectors: Divisões angulares da malha.
+           # stacks: Divisões verticais da malha.
 
-        Raises:
-            ValueError: Se posiÃ§Ã£o, cor ou resoluÃ§Ã£o da malha forem invÃ¡lidas.
-        """
         if radius <= 0.0:
             raise ValueError("O raio do marcador deve ser positivo.")
         if sectors < 3 or stacks < 2:
-            raise ValueError("A malha esfÃ©rica precisa de pelo menos 3 setores e 2 faixas.")
+            raise ValueError("A malha esférica precisa de pelo menos 3 setores e 2 faixas.")
 
         self.position = tuple(position)
         self.color = tuple(color)
         if len(self.position) != 3 or len(self.color) != 3:
-            raise ValueError("A posiÃ§Ã£o e a cor do marcador devem ter trÃªs componentes.")
+            raise ValueError("A posição e a cor do marcador devem ter três componentes.")
 
         self.model = np.eye(4, dtype=np.float32)
         self.model[:3, :3] *= radius
@@ -98,12 +92,8 @@ class LightMarker:
         self.color_location = glGetUniformLocation(program, "markerColor")
 
     def draw(self, view, projection):
-        """Desenha o marcador com as matrizes de cÃ¢mera fornecidas.
+        #Desenha o marcador com as matrizes de câmera fornecidas.
 
-        Args:
-            view: Matriz de visualizaÃ§Ã£o 4x4.
-            projection: Matriz de projeÃ§Ã£o 4x4.
-        """
         previous_program = int(glGetIntegerv(GL_CURRENT_PROGRAM))
         previous_vao = int(glGetIntegerv(GL_VERTEX_ARRAY_BINDING))
         try:
@@ -119,7 +109,7 @@ class LightMarker:
             glUseProgram(previous_program)
 
     def close(self):
-        """Libera o buffer, o VAO e o shader do marcador."""
+        #Libera o buffer, o VAO e o shader do marcador.
         glDeleteBuffers(1, [self.vbo])
         glDeleteVertexArrays(1, [self.vao])
         glDeleteProgram(self.shader.get_program())

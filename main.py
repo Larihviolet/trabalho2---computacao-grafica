@@ -1,5 +1,4 @@
-"""Inicializa a cena OpenGL, controla entradas e executa o loop de renderização."""
-
+﻿
 from pathlib import Path
 
 import glfw
@@ -25,8 +24,8 @@ LIGHTING_MIXED = 2
 glfw.init()
 glfw.window_hint(glfw.VISIBLE, glfw.FALSE)
 
-window_height = 700
-window_width = 700
+window_height = 1400
+window_width = 1400
 
 window = glfw.create_window(window_width, window_height, "Programa", None, None)
 
@@ -54,7 +53,7 @@ trees = OakTrees(ground_height=-2.0)
 graveyard = Graveyard(ground_height=-2.0)
 camera_bounds = CameraBounds(ground.size, ground.height, max_height=60.0)
 
-# Materiais por objeto: kd e ks controlam reflexÃµes; ns controla o brilho.
+# Materiais por objeto: kd e ks controlam reflexões difusa e especular e ns controla o brilho.
 material_profiles = {
     "tower": Material(0.68, 0.24, 12.0),
     "circle": Material(0.82, 0.40, 18.0),
@@ -88,13 +87,14 @@ ground.material = material_profiles["ground"]
 tower_ground.material = material_profiles["tower_ground"]
 fence.material = material_profiles["fence"]
 
-# Holofote fixo acima da torre, apontado para o chÃ£o.
+# Luzes da cena: holofote da torre, luz do sol, luz vermelha do círculo ritual e luz da estátua.
 spotlight_max_height = 10.0
 spotlight_position = (0.0, spotlight_max_height, -30.0)
 spotlight_direction = (0.0, -1.0, 0.0)
 spotlight_color = (0.78, 0.86, 1.0)
 spotlight_inner_cutoff = float(np.cos(np.radians(12.0)))
 spotlight_outer_cutoff = float(np.cos(np.radians(20.0)))
+# Luz do sol simulada como uma fonte direcional distante, com intensidade ajustável.
 sun_direction = (0.35, 0.85, 0.40)
 sun_color = (1.0, 0.92, 0.78)
 sun_intensity =0.10 #Intensidade da luz do sol (0.0 a 1.0). 
@@ -104,7 +104,7 @@ exterior_ambient_intensity = 0.15
 diffuse_enabled = True
 specular_enabled = True
 ambient_enabled = True
-spotlight_enabled = True
+spotlight_enabled = True 
 demon_light_enabled = True
 interior_lighting_step = 0
 
@@ -113,7 +113,7 @@ tower_volume_center = (0.0, -30.0)
 tower_volume_radius = 3.5
 tower_volume_min_height = -2.0
 tower_volume_max_height = 14.0
-# Luz vermelha do cÃ­rculo: curta e confinada ao volume interno da torre.
+# Luz vermelha do círculo: curta e confinada ao volume interno da torre.
 demon_light_position = (
     interior.circle_pivot[0],
     interior.circle_pivot[1] + 0.35,
@@ -125,12 +125,8 @@ light_marker = LightMarker(spotlight_position, spotlight_color)
 
 
 def configure_lighting(shader, lighting_zone):
-    """Define uniformes de iluminação estáticos na cena.
+    #Define uniformes de iluminação estáticos na cena.
 
-    Args:
-        shader: Programa OpenGL que receberá os valores.
-        lighting_zone: Zona de iluminação aplicada pelo shader.
-    """
     program = shader.get_program()
     previous_program = int(glGetIntegerv(GL_CURRENT_PROGRAM))
     try:
@@ -213,10 +209,9 @@ for shader, _ in scene_shaders:
 
 
 def update_scene_controls():
-    """Envia toggles e intensidade de luz aos programas da cena.
+    #Envia toggles e intensidade de luz aos programas da cena.
 
-    Os valores são estáticos entre eventos de teclado.
-    """
+    #Os valores são estáticos entre eventos de teclado.
     previous_program = int(glGetIntegerv(GL_CURRENT_PROGRAM))
     try:
         for (program, diffuse_location, specular_location, ambient_location,
@@ -232,14 +227,13 @@ def update_scene_controls():
     finally:
         glUseProgram(previous_program)
 
-# PosiÃ§Ã£o, direÃ§Ã£o de observaÃ§Ã£o e eixo vertical da cÃ¢mera.
+# Posição, direção de observação e eixo vertical da câmera.
 camera_position = glm.vec3(0.0, 5.0, 3.0)
 camera_front = glm.vec3(0.0, 0.0, -1.0)
 camera_up = glm.vec3(0.0, 1.0, 0.0)
 
 first_mouse = True
-yaw = -90.0  # O Ã¢ngulo horizontal inicial aponta para o eixo Z negativo.
-pitch = 0.0
+yaw = -90.0  
 last_x = window_width / 2.0
 last_y = window_height / 2.0
 fov = 45.0
@@ -250,15 +244,7 @@ last_frame = 0.0
 
 
 def key_event(window, key, scancode, action, mods):
-    """Processa teclas da câmera, luzes e janela.
-
-    Args:
-        window: Janela GLFW associada ao evento.
-        key: Código da tecla.
-        scancode: Código físico da tecla fornecido pelo GLFW.
-        action: Ação de pressionar, repetir ou soltar.
-        mods: Modificadores ativos durante o evento.
-    """
+    #Processa teclas da câmera, luzes e janela.
     global camera_position
     global diffuse_enabled, specular_enabled, ambient_enabled
     global spotlight_enabled, demon_light_enabled, interior_lighting_step
@@ -330,30 +316,19 @@ def key_event(window, key, scancode, action, mods):
         
 
 def framebuffer_size_callback(window, width, height):
-    """Atualiza viewport e dimensões após redimensionamento.
-
-    Args:
-        window: Janela GLFW redimensionada.
-        width: Nova largura em pixels.
-        height: Nova altura em pixels.
-    """
+    #Atualiza viewport e dimensões após redimensionamento. 
     global window_width, window_height
 
-    # Ajusta a Ã¡rea de renderizaÃ§Ã£o e a proporÃ§Ã£o Ã  resoluÃ§Ã£o da janela.
+    # Ajusta a área de renderização e a proporção à resolução da janela.
     glViewport(0, 0, width, height)
     window_width = max(width, 1)
     window_height = max(height, 1)
 
-# O GLFW chama esta funÃ§Ã£o sempre que o mouse se move.
-# -------------------------------------------------------
+# O GLFW chama esta função sempre que o mouse se move.
 def mouse_callback(window, xpos, ypos):
-    """Atualiza a direção da câmera conforme o movimento do mouse.
+  #Atualiza a direção da câmera conforme o movimento do mouse.
 
-    Args:
-        window: Janela GLFW que recebeu o movimento.
-        xpos: Posição horizontal do cursor.
-        ypos: Posição vertical do cursor.
-    """
+    
     global camera_front, last_x, last_y, first_mouse, yaw, pitch
    
     if first_mouse:
@@ -363,18 +338,18 @@ def mouse_callback(window, xpos, ypos):
         first_mouse = False
 
     xoffset = xpos - last_x
-    yoffset = last_y - ypos  # Inverte o eixo vertical da janela para controlar a inclinaÃ§Ã£o.
+    yoffset = last_y - ypos  # Inverte o eixo vertical da janela para controlar a inclinação.
     last_x = xpos
     last_y = ypos
 
-    sensitivity = 0.1  # Sensibilidade da rotaÃ§Ã£o da cÃ¢mera ao movimento do mouse.
+    sensitivity = 0.1  # Sensibilidade da rotação da câmera ao movimento do mouse.
     xoffset *= sensitivity
     yoffset *= sensitivity
 
     yaw += xoffset
     pitch += yoffset
 
-    # Limita a inclinaÃ§Ã£o para impedir que a cÃ¢mera vire de cabeÃ§a para baixo.
+    # Limita a inclinação para impedir que a câmera vire de cabeça para baixo.
     if (pitch > 89.0):
         pitch = 89.0
     if (pitch < -89.0):
@@ -389,13 +364,8 @@ def mouse_callback(window, xpos, ypos):
 # O GLFW chama esta funÃ§Ã£o quando a roda do mouse Ã© acionada.
 # ----------------------------------------------------------------------
 def scroll_callback(window, xoffset, yoffset):
-    """Ajusta o campo de visão em resposta à roda do mouse.
+    #Ajusta o campo de visão em resposta à roda do mouse.
 
-    Args:
-        window: Janela GLFW que recebeu o evento.
-        xoffset: Deslocamento horizontal da roda.
-        yoffset: Deslocamento vertical da roda.
-    """
     global fov
 
     fov -= yoffset
@@ -410,28 +380,21 @@ glfw.set_cursor_pos_callback(window, mouse_callback)
 glfw.set_scroll_callback(window, scroll_callback)
 update_scene_controls()
 
-# Captura o cursor para controlar a direÃ§Ã£o da cÃ¢mera.
+# Captura o cursor para controlar a direção da câmera.
 glfw.set_input_mode(window, glfw.CURSOR, glfw.CURSOR_DISABLED)
 
 def view():
-    """Calcula a matriz de visualização da câmera.
+    #Calcula a matriz de visualização da câmera.
 
-    Returns:
-        Matriz NumPy float32 de visualização 4x4.
-    """
     matrix = glm.lookAt(camera_position, camera_position + camera_front, camera_up)
     return np.asarray(matrix, dtype=np.float32)
 
 def projection():
-    """Retorna a matriz de projeção em cache para a janela atual.
-
-    Returns:
-        Matriz NumPy float32 de projeção 4x4.
-    """
+    #Retorna a matriz de projeção em cache para a janela atual.
     global _projection_cache_key, _projection_cache
     cache_key = (fov, window_width, window_height)
     if cache_key != _projection_cache_key:
-        # A projeÃ§Ã£o sÃ³ muda quando o FOV ou o tamanho da janela muda.
+        # A projeção só muda quando o FOV ou o tamanho da janela muda.
         matrix = glm.perspective(
             glm.radians(fov), window_width / window_height, 0.1, 100.0)
         _projection_cache = np.asarray(matrix, dtype=np.float32)

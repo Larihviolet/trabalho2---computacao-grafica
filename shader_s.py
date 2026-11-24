@@ -1,22 +1,14 @@
-"""Compila, vincula e controla programas de shaders OpenGL."""
+#Compila, vincula e controla programas de shaders OpenGL.
 
 from pathlib import Path
 
 from OpenGL.GL import *
-
 class Shader:
-    """Programa OpenGL vinculado a um par de shaders de vértice e fragmento."""
+    #Programa OpenGL vinculado a um par de shaders de vértice e fragmento.
 
     def __init__(self, vertex_path: str, fragment_path: str):
-        """Carrega, compila e vincula os arquivos de shader.
+        #Carrega, compila e vincula os arquivos de shader.
 
-        Args:
-            vertex_path: Caminho do shader de vértice, absoluto ou relativo.
-            fragment_path: Caminho do shader de fragmento, absoluto ou relativo.
-
-        Raises:
-            RuntimeError: Se a compilação ou vinculação falhar.
-        """
         shader_directory = Path(__file__).resolve().parent
         vertex_path = Path(vertex_path)
         fragment_path = Path(fragment_path)
@@ -47,27 +39,13 @@ class Shader:
 
 
     def get_program(self):
-        """Retorna o identificador do programa OpenGL.
-
-        Returns:
-            Identificador inteiro do programa.
-        """
         return self.program_id
         
     def use(self) -> None:
-        """Ativa este programa OpenGL para os próximos comandos de desenho."""
         glUseProgram(self.program_id)
         
     def check_compile_errors(self, shader: int, shader_type: str) -> None:
-        """Verifica erros de compilação ou vinculação do shader.
-
-        Args:
-            shader: Identificador do shader ou programa OpenGL.
-            shader_type: ``VERTEX``, ``FRAGMENT`` ou ``PROGRAM``.
-
-        Raises:
-            RuntimeError: Se o shader não compilar ou o programa não vincular.
-        """
+        #Verifica erros de compilação ou vinculação do shader.
         if shader_type != "PROGRAM":
             success = glGetShaderiv(shader, GL_COMPILE_STATUS)
             if not success:

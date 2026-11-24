@@ -1,4 +1,4 @@
-﻿"""Renderiza um fundo panorÃ¢mico a partir de uma imagem em cruz 4x3."""
+﻿#Renderiza um fundo panorâmico a partir de uma imagem em cruz 4x3.
 
 from pathlib import Path
 
@@ -10,17 +10,9 @@ from shader_s import Shader
 
 
 def load_cross_faces(path):
-    """Recorta as seis faces de uma imagem de cubemap em cruz 4x3.
+    #Recorta as seis faces de uma imagem de cubemap em cruz 4x3.
+    #Faces RGB na ordem OpenGL: +X, -X, +Y, -Y, +Z e -Z.
 
-    Args:
-        path: Caminho da imagem de origem.
-
-    Returns:
-        Faces RGB na ordem OpenGL: +X, -X, +Y, -Y, +Z e -Z.
-
-    Raises:
-        ValueError: Se a imagem nÃ£o for uma cruz 4x3 com faces quadradas.
-    """
     with Image.open(path) as source:
         width, height = source.size
         if width % 4 or height % 3 or width // 4 != height // 3:
@@ -33,14 +25,9 @@ def load_cross_faces(path):
 
 
 class Skybox:
-    """Fundo de cena amostrado por direÃ§Ã£o de visÃ£o."""
-
     def __init__(self, cubemap_path):
-        """Carrega o cubemap e cria seus recursos OpenGL.
 
-        Args:
-            cubemap_path: Caminho da imagem de cubemap em cruz 4x3.
-        """
+        #Carrega o cubemap e cria seus recursos OpenGL.
         faces = load_cross_faces(cubemap_path)
         shader_dir = Path(__file__).resolve().parent / "shaders"
         self.shader = Shader(str(shader_dir / "skybox.vs"),
@@ -72,12 +59,6 @@ class Skybox:
         self._inverse_projection_matrix = None
 
     def draw(self, view, projection):
-        """Desenha o cÃ©u e restaura o estado OpenGL anterior.
-
-        Args:
-            view: Matriz de visualizaÃ§Ã£o 4x4.
-            projection: Matriz de projeÃ§Ã£o 4x4.
-        """
         previous_program = int(glGetIntegerv(GL_CURRENT_PROGRAM))
         previous_vao = int(glGetIntegerv(GL_VERTEX_ARRAY_BINDING))
         depth_function = int(glGetIntegerv(GL_DEPTH_FUNC))
@@ -98,7 +79,7 @@ class Skybox:
             self.shader.use()
             glUniformMatrix4fv(self.inverse_projection, 1, GL_TRUE,
                                self._inverse_projection_matrix)
-            # SÃ³ a rotaÃ§Ã£o: o cÃ©u permanece infinitamente distante.
+            # Só a rotação: o céu permanece infinitamente distante.
             glUniformMatrix3fv(self.inverse_view_rotation, 1, GL_TRUE,
                                inverse_view_rotation)
             glUniform1i(self.sampler, 0)
@@ -122,7 +103,7 @@ class Skybox:
             glUseProgram(previous_program)
 
     def close(self):
-        """Libera os recursos do cubemap e shader."""
+        #Libera os recursos do cubemap e shader.
         glDeleteTextures(1, [self.texture])
         glDeleteVertexArrays(1, [self.vao])
         glDeleteProgram(self.shader.get_program())

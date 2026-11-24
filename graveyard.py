@@ -1,4 +1,4 @@
-"""Distribui lápides e anima a posição orbital da estátua anjo."""
+#Distribui lápides e anima a posição orbital da estátua anjo.
 
 from pathlib import Path
 
@@ -9,21 +9,18 @@ from obj_model import ObjModel
 
 
 class Graveyard:
-    """Cena do cemitério com lápides instanciadas e uma luz móvel."""
+    #Cena do cemitério com lápides instanciadas e uma luz móvel.
 
     def __init__(self, center=(0.0, -30.0), ground_height=-2.0,
                  orbit_radius=10.0, orbit_speed=12.0):
-        """Cria as lápides, a estátua e o estado inicial da órbita.
+       #Cria as lápides, a estátua e o estado inicial da órbita.
 
-        Args:
-            center: Centro X e Z da torre e da órbita.
-            ground_height: Altura do chão.
-            orbit_radius: Raio da órbita da estátua.
-            orbit_speed: Velocidade angular em graus por segundo.
+        #Args:
+            #center: Centro X e Z da torre e da órbita.
+            #ground_height: Altura do chão.
+            #orbit_radius: Raio da órbita da estátua.
+            #orbit_speed: Velocidade angular em graus por segundo.
 
-        Raises:
-            ValueError: Se o raio da órbita não for positivo.
-        """
         if orbit_radius <= 0:
             raise ValueError("O raio da órbita deve ser positivo.")
         root = Path(__file__).resolve().parent / "objetos"
@@ -61,11 +58,11 @@ class Graveyard:
         self.update(0.0)
 
     def update(self, delta_time):
-        """Atualiza a órbita da estátua e a direção da luz associada.
+        #Atualiza a órbita da estátua e a direção da luz associada.
 
-        Args:
-            delta_time: Tempo desde a atualização anterior, em segundos.
-        """
+        #Args:
+            #delta_time: Tempo desde a atualização anterior, em segundos.
+     
         # Usa o tempo entre quadros e reconstrói a matriz para evitar deriva na órbita.
         if self.angel_movement_enabled:
             elapsed = max(float(delta_time), 0.0)
@@ -88,21 +85,16 @@ class Graveyard:
                                self.light_position[2])
 
     def toggle_angel_movement(self):
-        """Alterna o movimento orbital da estátua."""
+        #Alterna o movimento orbital da estátua.
         self.angel_movement_enabled = not self.angel_movement_enabled
 
     def draw(self, view, projection):
-        """Desenha lápides e estátua com as matrizes da câmera.
-
-        Args:
-            view: Matriz de visualização 4x4.
-            projection: Matriz de projeção 4x4.
-        """
+        #Desenha as lápides e a estátua anjo.
         self.stone.draw(view, projection, models=self.stone_models,
                         materials=self.stone_materials, cull_back_faces=True)
         self.angel.draw(view, projection)
 
     def close(self):
-        """Libera os recursos OpenGL dos modelos do cemitério."""
+        #Libera os recursos OpenGL dos modelos do cemitério.
         self.stone.close()
         self.angel.close()

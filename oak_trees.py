@@ -1,4 +1,4 @@
-"""Distribui cópias de um grupo de carvalhos usando malha compartilhada."""
+#Distribui  um grupo de carvalhos usando malha compartilhada.
 
 from pathlib import Path
 
@@ -9,17 +9,10 @@ from obj_model import ObjModel
 
 
 class OakTrees:
-    """Conjunto de árvores com transformações e materiais por instância."""
+    #Conjunto de árvores com transformações e materiais por instância.
 
     def __init__(self, path=None, ground_height=-2.0, height=8.0, seed=42):
-        """Carrega o grupo de árvores e distribui cópias determinísticas.
-
-        Args:
-            path: Caminho OBJ opcional do grupo de árvores.
-            ground_height: Altura da base das árvores.
-            height: Altura alvo do grupo.
-            seed: Semente para pequenas variações de posição e escala.
-        """
+        #Carrega o grupo de árvores e distribui cópias determinísticas.
         if path is None:
             path = (Path(__file__).resolve().parent / "objetos" / "oak_trees" /
                     "oak_trees.obj")
@@ -41,17 +34,12 @@ class OakTrees:
         self.materials = None
 
     def draw(self, view, projection):
-        """Desenha as árvores sem culling para preservar folhas planas.
-
-        Args:
-            view: Matriz de visualização 4x4.
-            projection: Matriz de projeção 4x4.
-        """
-        # As folhas são planos visíveis dos dois lados; o canal alfa recorta seu contorno.
+        #Desenha as árvores sem culling para preservar folhas planas.
+        # As folhas são planos visíveis dos dois lados, o canal alfa recorta seu contorno.
         self.asset.draw(
             view, projection, models=self.models, alpha_cutoff=0.5,
             materials=self.materials, cull_back_faces=False)
 
     def close(self):
-        """Libera a malha e os recursos compartilhados das árvores."""
+        #Libera a malha e os recursos compartilhados das árvores.
         self.asset.close()
