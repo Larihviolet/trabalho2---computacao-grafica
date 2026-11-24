@@ -27,7 +27,7 @@ glfw.window_hint(glfw.VISIBLE, glfw.FALSE)
 window_height = 700
 window_width =700
 
-window = glfw.create_window(window_width, window_height, "Programa", None, None)
+window = glfw.create_window(window_width, window_height, "O Ritual de Toadbert", None, None)
 
 if (window == None):
     print("Failed to create GLFW window")
@@ -234,6 +234,7 @@ camera_up = glm.vec3(0.0, 1.0, 0.0)
 
 first_mouse = True
 yaw = -90.0  
+pitch = 0.0
 last_x = window_width / 2.0
 last_y = window_height / 2.0
 fov = 45.0
