@@ -107,6 +107,10 @@ ambient_enabled = True
 spotlight_enabled = True 
 demon_light_enabled = True
 interior_lighting_step = 0
+diffuse_reflection_scale = 1.0
+specular_reflection_scale = 1.0
+reflection_scale_step = 0.1
+reflection_scale_max = 2.0
 
 # Volume interno aproximado da torre em coordenadas de mundo.
 tower_volume_center = (0.0, -30.0)
@@ -207,6 +211,8 @@ for shader, _ in scene_shaders:
         glGetUniformLocation(program, "spotlightEnabled"),
         glGetUniformLocation(program, "demonLightEnabled"),
         glGetUniformLocation(program, "sunIntensity"),
+        glGetUniformLocation(program, "diffuseReflectionScale"),
+        glGetUniformLocation(program, "specularReflectionScale"),
     ))
 
 
@@ -218,7 +224,8 @@ def update_scene_controls():
     try:
         for (program, diffuse_location, specular_location, ambient_location,
              spotlight_location, demon_location,
-             sun_location) in scene_control_uniforms:
+             sun_location, diffuse_scale_location,
+             specular_scale_location) in scene_control_uniforms:
             glUseProgram(program)
             glUniform1i(diffuse_location, int(diffuse_enabled))
             glUniform1i(specular_location, int(specular_enabled))
@@ -226,6 +233,8 @@ def update_scene_controls():
             glUniform1i(spotlight_location, int(spotlight_enabled))
             glUniform1i(demon_location, int(demon_light_enabled))
             glUniform1f(sun_location, sun_intensity)
+            glUniform1f(diffuse_scale_location, diffuse_reflection_scale)
+            glUniform1f(specular_scale_location, specular_reflection_scale)
     finally:
         glUseProgram(previous_program)
 
@@ -251,7 +260,7 @@ def key_event(window, key, scancode, action, mods):
     global camera_position
     global diffuse_enabled, specular_enabled, ambient_enabled
     global spotlight_enabled, demon_light_enabled, interior_lighting_step
-    global sun_intensity
+    global sun_intensity, diffuse_reflection_scale, specular_reflection_scale
     lighting_controls_changed = False
 
     if key == glfw.KEY_ESCAPE and action == glfw.PRESS:
@@ -268,6 +277,25 @@ def key_event(window, key, scancode, action, mods):
         lighting_controls_changed = True
         state = "ativada" if specular_enabled else "desativada"
         print(f"Iluminacao especular {state} (G)")
+    if key in (glfw.KEY_Q, glfw.KEY_E, glfw.KEY_R, glfw.KEY_T) and \
+            action in (glfw.PRESS, glfw.REPEAT):
+        scale = (diffuse_reflection_scale
+                 if key in (glfw.KEY_Q, glfw.KEY_E)
+                 else specular_reflection_scale)
+        previous_scale = scale
+        if key in (glfw.KEY_Q, glfw.KEY_R):
+            scale = max(0.0, scale - reflection_scale_step)
+        else:
+            scale = min(reflection_scale_max, scale + reflection_scale_step)
+        if scale != previous_scale:
+            if key in (glfw.KEY_Q, glfw.KEY_E):
+                diffuse_reflection_scale = scale
+                label, keys = "difusa", "Q-/E+"
+            else:
+                specular_reflection_scale = scale
+                label, keys = "especular", "R-/T+"
+            lighting_controls_changed = True
+            print(f"Reflexao {label}: {scale:.1f}x ({keys})")
     # H alterna sÃ³ a contribuiÃ§Ã£o ambiente, sem desligar as outras luzes.
     if key == glfw.KEY_H and action == glfw.PRESS:
         ambient_enabled = not ambient_enabled

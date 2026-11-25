@@ -26,6 +26,8 @@ uniform vec3 viewPos;
 uniform float kd;
 uniform float ks;
 uniform float ns;
+uniform float diffuseReflectionScale;
+uniform float specularReflectionScale;
 uniform bool ambientEnabled;
 uniform bool diffuseEnabled;
 uniform bool specularEnabled;
@@ -47,6 +49,8 @@ uniform int lightingZone;
 out vec4 fragmentColor;
 void main() {
     vec3 color = baseColor * surfaceColor;
+    float diffuseCoefficient = kd * diffuseReflectionScale;
+    float specularCoefficient = ks * specularReflectionScale;
     if (hasTexture) {
         vec4 texel = texture(diffuseMap, uv);
         if (texel.a < alphaCutoff) discard;
@@ -72,14 +76,15 @@ void main() {
     vec3 viewDir = normalize(viewPos - worldPosition);
     float diffuseFactor = max(dot(normal, lightDir), 0.0);
     float diffuse = diffuseEnabled && spotlightEnabled && interiorSurface
-        ? kd * diffuseFactor
+        ? diffuseCoefficient * diffuseFactor
         : 0.0;
     vec3 reflectDir = reflect(-lightDir, normal);
     float specularFactor = specularEnabled && spotlightEnabled &&
                            interiorSurface && diffuseFactor > 0.0
         ? pow(max(dot(viewDir, reflectDir), 0.0), max(ns, 1.0))
         : 0.0;
-    vec3 specular = ks * specularFactor * lightColor * cone * attenuation * 2.5;
+    vec3 specular = specularCoefficient * specularFactor * lightColor *
+                    cone * attenuation * 2.5;
     vec3 toAngelLight = angelLightPosition - worldPosition;
     float angelDistance = length(toAngelLight);
     vec3 angelLightDir = normalize(toAngelLight);
@@ -90,14 +95,14 @@ void main() {
                                    0.0002 * angelDistance * angelDistance);
     float angelDiffuseFactor = max(dot(normal, angelLightDir), 0.0);
     float angelDiffuse = diffuseEnabled && exteriorSurface
-        ? kd * angelDiffuseFactor
+        ? diffuseCoefficient * angelDiffuseFactor
         : 0.0;
     vec3 angelReflectDir = reflect(-angelLightDir, normal);
     float angelSpecularFactor = specularEnabled && exteriorSurface &&
                                 angelDiffuseFactor > 0.0
         ? pow(max(dot(viewDir, angelReflectDir), 0.0), max(ns, 1.0))
         : 0.0;
-    vec3 angelSpecular = ks * angelSpecularFactor * angelLightColor *
+    vec3 angelSpecular = specularCoefficient * angelSpecularFactor * angelLightColor *
                          angelCone * angelAttenuation * 2.5;
     vec3 toDemonLight = demonLightPosition - worldPosition;
     float demonDistance = length(toDemonLight);
@@ -112,7 +117,7 @@ void main() {
         : normal;
     float demonDiffuseFactor = max(dot(normal, demonLightDir), 0.0);
     float demonDiffuse = diffuseEnabled && interiorSurface
-        ? kd * demonDiffuseFactor
+        ? diffuseCoefficient * demonDiffuseFactor
         : 0.0;
     vec3 demonReflectDir = reflect(-demonLightDir, normal);
     float demonSpecularFactor = specularEnabled && interiorSurface &&
@@ -120,18 +125,20 @@ void main() {
         ? pow(max(dot(viewDir, demonReflectDir), 0.0), max(ns, 1.0))
         : 0.0;
     vec3 demonContribution = demonLightColor *
-        (demonDiffuse + ks * demonSpecularFactor) * demonAttenuation * 2.5;
+        (demonDiffuse + specularCoefficient * demonSpecularFactor) *
+        demonAttenuation * 2.5;
     vec3 sunLightDir = normalize(sunDirection);
     float sunDiffuseFactor = max(dot(normal, sunLightDir), 0.0);
     float sunDiffuse = exteriorSurface && diffuseEnabled
-        ? kd * sunDiffuseFactor
+        ? diffuseCoefficient * sunDiffuseFactor
         : 0.0;
     vec3 sunReflectDir = reflect(-sunLightDir, normal);
     float sunSpecularFactor = exteriorSurface && specularEnabled &&
                               sunDiffuseFactor > 0.0
         ? pow(max(dot(viewDir, sunReflectDir), 0.0), max(ns, 1.0))
         : 0.0;
-    vec3 sunSpecular = ks * sunSpecularFactor * sunColor * sunIntensity;
+    vec3 sunSpecular = specularCoefficient * sunSpecularFactor *
+                       sunColor * sunIntensity;
     vec3 ambient = vec3(0.0);
     if (ambientEnabled) {
         if (interiorSurface) ambient += vec3(interiorAmbientIntensity);
